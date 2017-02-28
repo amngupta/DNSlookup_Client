@@ -1,4 +1,3 @@
-
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.Random;
@@ -38,19 +37,18 @@ public class DNSlookup {
 	fqdn = args[1];
 	
 	if (argCount == 3) {  // option provided
-	    if (args[2].equals("-t"))
-		tracingOn = true;
-	    else if (args[2].equals("-6"))
-		IPV6Query = true;
-	    else if (args[2].equals("-t6")) {
-		tracingOn = true;
-		IPV6Query = true;
-	    } else  { // option present but wasn't valid option
-		usage();
-		return;
-	    }
+		if (args[2].equals("-t"))
+			tracingOn = true;
+		else if (args[2].equals("-6"))
+			IPV6Query = true;
+		else if (args[2].equals("-t6")) {
+			tracingOn = true;
+			IPV6Query = true;
+		} else { // option present but wasn't valid option
+			usage();
+			return;
+		}
 	}
-
 
 	// Start adding code here to initiate the lookup
 	
