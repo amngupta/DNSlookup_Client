@@ -88,6 +88,19 @@ public class DNSlookup {
 	}
 
 	// Start adding code here to initiate the lookup
+		System.out.println(rootNameServer);
+		DatagramSocket serverSocket = new DatagramSocket(9876);
+		byte[] receiveData = new byte[1024];
+		//byte[] sendData = {0x2b,0x2b, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  0x03, 0x77, 0x77, 119, 0x05, 0x75, 0x67, 0x72, 0x61, 0x64, 0x02, 0x63, 0x73, 0x03, 0x75, 0x62, 0x63, 0x02, 0x63, 0x61,0x00,0x00,0x01,0x00,0x01};
+		byte[] sendData = encodeQuery(args[1]);
+		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, rootNameServer, 53);
+		DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+
+		serverSocket.send(sendPacket);
+		serverSocket.receive(receivePacket);
+
+		String modifiedSentence = new String(receivePacket.getData());
+		serverSocket.close();
 	
     }
     
