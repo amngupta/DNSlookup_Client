@@ -23,6 +23,38 @@ public class DNSResponse {
 
     // When in trace mode you probably want to dump out all the relevant information in a response
 
+    byte[] encodeQuery(String query) {
+        byte[] encodedQuery = new byte[58];
+        String[] split = query.split("\\.");
+        int counter = 12;
+        //FIX THIS SHIT
+        int queryId = (int) (Math.random() * 255);
+        encodedQuery[1] = (byte) queryId;
+        encodedQuery[2] = 0;
+        encodedQuery[3] = 0;
+        encodedQuery[5] = 1;
+        for (int i = 0; i < split.length; i++) {
+            encodedQuery[counter] = (byte) split[i].length();
+            counter++;
+            for (int j = 0; j < split[i].length(); j++) {
+                String a = split[i];
+                char c = a.charAt(j);
+                String hexForAscii = Integer.toHexString((int) c);
+                byte test = Byte.parseByte(hexForAscii, 16);
+                encodedQuery[counter] = test;
+                counter++;
+            }
+        }
+        encodedQuery[counter + 2] = 1;
+        encodedQuery[counter + 4] = 1;
+        return encodedQuery;
+    }
+
+    String decodeQuery(String response){
+
+        return "";
+    }
+
 	void dumpResponse() {
 		
 
