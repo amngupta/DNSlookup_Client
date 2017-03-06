@@ -50,13 +50,47 @@ public class DNSResponse {
         return encodedQuery;
     }
 
-    String decodeQuery(String response){
+    public static int convertBytesToInt (Byte [] arr, int offset)      // unsigned
+    {
+        return (arr[offset] & 0xFF) << 8 | (arr[offset+1] & 0xFF);
+    }
 
+    public static String getString(Byte[] arr, int offset, int count){
+        String result = "";
+        for(int i = 0; i < count; i++){
+            char c = (char) arr[offset+i].intValue();
+            result+= c;
+        }
+        return result+".";
+    }
+
+    /**
+ * SAMPLE DNS RESPONSE:
+ * 5F 9F 84 00 00 01 00 01 00 02 00 02 03 77 77 77 05 75 67 72 61 64 02 63 73 03 75 62 63 02 63 61 00 00 01 00 01 C0 0C 00 01 00 01 00 00 0E 10 00 04 8E 67 06 2B C0 10 00 02 00 01 00 00 0E 10 00 06 03 66 73 31 C0 10 C0 10 00 02 00 01 00 00 0E 10 00 06 03 6E 73 31 C0 16 C0 41 00 01 00 01 00 00 0E 10 00 04 C6 A2 23 01 C0 53 00 01 00 01 00 00 0E 10 00 04 8E 67 06 06
+ * https://www.gasmi.net/hpd/
+ * Decoder in JS:
+ * https://github.com/mafintosh/dns-packet/blob/master/index.js
+ * */
+    String decodeQuery(Byte[] response){
+        String qname = "";
+        int counter = 12;
+        this.queryID = convertBytesToInt(response, 0);
+        int questionCount = convertBytesToInt(response, 4);
+        this.answerCount = convertBytesToInt(response, 6);
+        this.nsCount = convertBytesToInt(response,8);
+        this.additionalCount = convertBytesToInt(response, 10);
+        int offset = 12;
+        int counterForDot = response[offset];
+        while (response[counterForDot].byteValue() != 0){
+            qname += getString(response, offset, counterForDot);
+            counterForDot = response[offset+qname.length()];
+        }
         return "";
     }
 
+
+
 	void dumpResponse() {
-		
 
 
 	}
