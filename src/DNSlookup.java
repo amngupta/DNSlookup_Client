@@ -17,50 +17,30 @@ public class DNSlookup {
     static final int MIN_PERMITTED_ARGUMENT_COUNT = 2;
     static final int MAX_PERMITTED_ARGUMENT_COUNT = 3;
 
-    public static  byte[] encodeQuery(String query){
-		byte[] encodedQuery = new byte[58];
-		String [] split = query.split("\\.");
-		int counter = 12;
-		//FIX THIS SHIT
-		int queryId = (int) (Math.random()*255);
-		encodedQuery[1] = (byte) queryId;
-		encodedQuery[2] = 0;
-		encodedQuery[3] = 0;
-		encodedQuery[5] = 1;
-		for (int i = 0; i < split.length; i++){
-			encodedQuery[counter] = (byte) split[i].length();
-			counter++;
-			for (int j = 0; j < split[i].length(); j++){
-				String a = split[i];
-				char c = a.charAt(j);
-				String hexForAscii = Integer.toHexString((int) c);
-				byte test = Byte.parseByte(hexForAscii,16);
-				encodedQuery[counter] = test;
-				counter++;
-			}
-		}
-		encodedQuery[counter+2] = 1;
-		encodedQuery[counter+4] = 1;
-		return encodedQuery;
+	DNSlookup(){
+		try {
+			DatagramSocket serverSocket = new DatagramSocket(9876);
+		}catch(Exception e)
+		{}
 	}
-
-
     /**
      * @param args
      */
     public static void main(String[] args) throws Exception {
 	String fqdn;
-	DNSResponse response; // Just to force compilation
-	int argCount = args.length;
+	DNSResponse response = new DNSResponse(); // Just to force compilation
+
+//		//DNSlookup o = new DNSlookup();
+		int argCount = args.length;
 	boolean tracingOn = false;
 	boolean IPV6Query = false;
 	InetAddress rootNameServer;
 
 
-	byte [] sendArr = (encodeQuery("www.google.com"));
-	for (int i = 0; i < sendArr.length; i++){
-		System.out.println(sendArr[i]);
-	}
+	//byte [] sendArr = (encodeQuery("www.google.com"));
+	//for (int i = 0; i < sendArr.length; i++){
+	//	System.out.println(sendArr[i]);
+	//}
 
 
 	if (argCount < MIN_PERMITTED_ARGUMENT_COUNT || argCount > MAX_PERMITTED_ARGUMENT_COUNT) {
@@ -88,21 +68,46 @@ public class DNSlookup {
 	}
 
 	// Start adding code here to initiate the lookup
-		System.out.println(rootNameServer);
+		//System.out.println(rootNameServer);
 		DatagramSocket serverSocket = new DatagramSocket(9876);
 		byte[] receiveData = new byte[1024];
 		//byte[] sendData = {0x2b,0x2b, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  0x03, 0x77, 0x77, 119, 0x05, 0x75, 0x67, 0x72, 0x61, 0x64, 0x02, 0x63, 0x73, 0x03, 0x75, 0x62, 0x63, 0x02, 0x63, 0x61,0x00,0x00,0x01,0x00,0x01};
-		byte[] sendData = encodeQuery(args[1]);
+		byte[] sendData = response.encodeQuery(args[1]);
+
+
+
 		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, rootNameServer, 53);
 		DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 
 		serverSocket.send(sendPacket);
 		serverSocket.receive(receivePacket);
 
-		String modifiedSentence = new String(receivePacket.getData());
+		int counter = 0;
+		int queryID1;
+		int queryID2;
+		byte[] testbyte = receivePacket.getData();
+		for(byte c: testbyte){
+			switch (counter) {
+				case 0:
+					queryID1 = c;
+					break;
+				case 1:
+					queryID2 = c;
+					break;
+
+
+
+			}
+			//System.out.format("%x\n",c);
+			counter++;
+		}
+		String h = response.decodeQuery(testbyte);
+
+
 		serverSocket.close();
 	
     }
+
     
     private static void usage() {
 	System.out.println("Usage: java -jar DNSlookup.jar rootDNS name [-6|-t|t6]");

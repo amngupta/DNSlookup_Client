@@ -20,8 +20,22 @@ public class DNSResponse {
     private boolean authoritative = false;// Is this an authoritative record
 
     // Note you will almost certainly need some additional instance variables.
-
+    class rData{
+        String ipAddress;
+        int name;
+        int type;
+        int classInt;
+        long ttl;
+        int rdLength;
+        int totalOffset;
+        rData(){
+            return;
+        }
+    }
     // When in trace mode you probably want to dump out all the relevant information in a response
+    DNSResponse(){
+        return;
+    }
 
     byte[] encodeQuery(String query) {
         byte[] encodedQuery = new byte[58];
@@ -50,28 +64,55 @@ public class DNSResponse {
         return encodedQuery;
     }
 
-    public static int convertBytesToInt (Byte [] arr, int offset)      // unsigned
+    public static int convertBytesToInt (byte [] arr, int offset)      // unsigned
     {
         return (arr[offset] & 0xFF) << 8 | (arr[offset+1] & 0xFF);
     }
 
-    public static String getString(Byte[] arr, int offset, int count){
+    public static String getString(byte[] arr, int offset, int count){
         String result = "";
         for(int i = 0; i < count; i++){
-            char c = (char) arr[offset+i].intValue();
+            char c = (char) arr[offset+i];
             result+= c;
         }
         return result+".";
     }
 
+    public static byte[] sendQuery(byte[] arr){
+        return arr;
+
+    }
+
+    public rData readRDATA(byte [] arr, int offset){
+
+        rData rData = new rData();
+        rData.name = convertBytesToInt(arr, offset);
+        rData.type = convertBytesToInt(arr, offset+2);
+        rData.classInt = convertBytesToInt(arr, offset+4);
+        //rData.ttl //NEED TO CONVERT NEXT 4 bytes to ttl - 6-9
+        rData.rdLength = convertBytesToInt(arr, offset+10);
+        int innerOffset = offset+12;
+        String ipAddress = "";
+        System.out.println(offset +" " +innerOffset + " "+ rData.rdLength);
+        for (int i = 0; i < 4; i++)
+        {
+            int ipBits = arr[innerOffset+i];
+            ipAddress += ipBits + ".";
+        }
+        rData.ipAddress = ipAddress;
+        //.substring(0, ipAddress.length()-2);
+        System.out.println(rData.ipAddress);
+        return rData;
+    }
+
     /**
- * SAMPLE DNS RESPONSE:
- * 5F 9F 84 00 00 01 00 01 00 02 00 02 03 77 77 77 05 75 67 72 61 64 02 63 73 03 75 62 63 02 63 61 00 00 01 00 01 C0 0C 00 01 00 01 00 00 0E 10 00 04 8E 67 06 2B C0 10 00 02 00 01 00 00 0E 10 00 06 03 66 73 31 C0 10 C0 10 00 02 00 01 00 00 0E 10 00 06 03 6E 73 31 C0 16 C0 41 00 01 00 01 00 00 0E 10 00 04 C6 A2 23 01 C0 53 00 01 00 01 00 00 0E 10 00 04 8E 67 06 06
- * https://www.gasmi.net/hpd/
- * Decoder in JS:
- * https://github.com/mafintosh/dns-packet/blob/master/index.js
- * */
-    String decodeQuery(Byte[] response){
+     * SAMPLE DNS RESPONSE:
+     * 5F 9F 84 00 00 01 00 01 00 02 00 02 03 77 77 77 05 75 67 72 61 64 02 63 73 03 75 62 63 02 63 61 00 00 01 00 01 C0 0C 00 01 00 01 00 00 0E 10 00 04 8E 67 06 2B C0 10 00 02 00 01 00 00 0E 10 00 06 03 66 73 31 C0 10 C0 10 00 02 00 01 00 00 0E 10 00 06 03 6E 73 31 C0 16 C0 41 00 01 00 01 00 00 0E 10 00 04 C6 A2 23 01 C0 53 00 01 00 01 00 00 0E 10 00 04 8E 67 06 06
+     * https://www.gasmi.net/hpd/
+     * Decoder in JS:
+     * https://github.com/mafintosh/dns-packet/blob/master/index.js
+     * */
+    String decodeQuery(byte[] response){
         String qname = "";
         int counter = 12;
         this.queryID = convertBytesToInt(response, 0);
@@ -81,10 +122,14 @@ public class DNSResponse {
         this.additionalCount = convertBytesToInt(response, 10);
         int offset = 12;
         int counterForDot = response[offset];
-        while (response[counterForDot].byteValue() != 0){
+        while (response[counterForDot] != 0){
             qname += getString(response, offset, counterForDot);
             counterForDot = response[offset+qname.length()];
         }
+        offset += qname.length() + 4;
+        System.out.println(qname + "   " + offset);
+        rData r = readRDATA(response, 37);
+
         return "";
     }
 
