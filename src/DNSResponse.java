@@ -1,3 +1,4 @@
+import java.awt.*;
 import java.net.InetAddress;
 
 
@@ -50,7 +51,7 @@ public class DNSResponse {
         return encodedQuery;
     }
 
-    public static int convertBytesToInt (Byte [] arr, int offset)      // unsigned
+    public static int convertBytesToInt (byte [] arr, int offset)      // unsigned
     {
         return (arr[offset] & 0xFF) << 8 | (arr[offset+1] & 0xFF);
     }
@@ -71,7 +72,7 @@ public class DNSResponse {
  * Decoder in JS:
  * https://github.com/mafintosh/dns-packet/blob/master/index.js
  * */
-    String decodeQuery(Byte[] response){
+    String decodeQuery(byte[] response){
         String qname = "";
         int counter = 12;
         this.queryID = convertBytesToInt(response, 0);
@@ -81,10 +82,13 @@ public class DNSResponse {
         this.additionalCount = convertBytesToInt(response, 10);
         int offset = 12;
         int counterForDot = response[offset];
-        while (response[counterForDot].byteValue() != 0){
+        while (response[counterForDot] != 0){
             qname += getString(response, offset, counterForDot);
             counterForDot = response[offset+qname.length()];
         }
+        offset += qname.length() + 4;
+        System.out.println(qname);
+
         return "";
     }
 

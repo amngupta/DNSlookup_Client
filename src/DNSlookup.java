@@ -45,6 +45,13 @@ public class DNSlookup {
 	}
 
 
+    public static int convertBytesToInt (byte [] arr, int offset)      // unsigned
+    {
+        return (arr[offset] & 0xFF) << 8 | (arr[offset+1] & 0xFF);
+    }
+
+
+
     /**
      * @param args
      */
@@ -62,6 +69,9 @@ public class DNSlookup {
 		System.out.println(sendArr[i]);
 	}
 
+	byte[] test = {0xe, 0x0C};
+    int test1 = convertBytesToInt(test, 0);
+    System.out.println("BYTE TEST" + test1);
 
 	if (argCount < MIN_PERMITTED_ARGUMENT_COUNT || argCount > MAX_PERMITTED_ARGUMENT_COUNT) {
 	    usage();
