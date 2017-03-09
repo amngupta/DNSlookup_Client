@@ -21,8 +21,22 @@ public class DNSResponse {
     private boolean authoritative = false;// Is this an authoritative record
 
     // Note you will almost certainly need some additional instance variables.
-
+    class rData{
+        String ipAddress;
+        int name;
+        int type;
+        int classInt;
+        long ttl;
+        int rdLength;
+        int totalOffset;
+        rData(){
+            return;
+        }
+    }
     // When in trace mode you probably want to dump out all the relevant information in a response
+    DNSResponse(){
+        return;
+    }
 
     byte[] encodeQuery(String query) {
         byte[] encodedQuery = new byte[58];
@@ -51,18 +65,39 @@ public class DNSResponse {
         return encodedQuery;
     }
 
-    public static int convertBytesToInt (byte [] arr, int offset)      // unsigned
+    public int convertBytesToInt (byte [] arr, int offset)      // unsigned
     {
         return (arr[offset] & 0xFF) << 8 | (arr[offset+1] & 0xFF);
     }
 
-    public static String getString(Byte[] arr, int offset, int count){
+    public static String getString(byte[] arr, int offset, int count){
         String result = "";
         for(int i = 0; i < count; i++){
-            char c = (char) arr[offset+i].intValue();
+            char c = (char) arr[offset+i];
             result+= c;
         }
         return result+".";
+    }
+
+    public rData readRDATA(byte [] arr, int offset){
+        rData rData = new rData();
+        rData.name = this.convertBytesToInt(arr, offset);
+        rData.type = this.convertBytesToInt(arr, offset+2);
+        rData.classInt = this.convertBytesToInt(arr, offset+4);
+        //rData.ttl //NEED TO CONVERT NEXT 4 bytes to ttl - 6-9
+        rData.rdLength = this.convertBytesToInt(arr, offset+10);
+        int innerOffset = offset+12;
+        String ipAddress = "";
+        System.out.println(offset +" " +innerOffset + " "+ rData.rdLength);
+        for (int i = 0; i < 4; i++)
+        {
+            int ipBits = arr[innerOffset+i];
+            ipAddress += ipBits + ".";
+        }
+        rData.ipAddress = ipAddress;
+        //.substring(0, ipAddress.length()-2);
+        System.out.println(rData.ipAddress);
+        return rData;
     }
 
     /**
@@ -75,11 +110,11 @@ public class DNSResponse {
     String decodeQuery(byte[] response){
         String qname = "";
         int counter = 12;
-        this.queryID = convertBytesToInt(response, 0);
-        int questionCount = convertBytesToInt(response, 4);
-        this.answerCount = convertBytesToInt(response, 6);
-        this.nsCount = convertBytesToInt(response,8);
-        this.additionalCount = convertBytesToInt(response, 10);
+        this.queryID = this.convertBytesToInt(response, 0);
+        int questionCount = this.convertBytesToInt(response, 4);
+        this.answerCount = this.convertBytesToInt(response, 6);
+        this.nsCount = this.convertBytesToInt(response,8);
+        this.additionalCount = this.convertBytesToInt(response, 10);
         int offset = 12;
         int counterForDot = response[offset];
         while (response[counterForDot] != 0){
@@ -87,8 +122,8 @@ public class DNSResponse {
             counterForDot = response[offset+qname.length()];
         }
         offset += qname.length() + 4;
-        System.out.println(qname);
-
+        System.out.println(qname + "   " + offset);
+        rData r = readRDATA(response, 37);
         return "";
     }
 
