@@ -54,28 +54,33 @@ public class DNSResponse {
 
     byte[] encodeQuery(String query) {
         byte[] encodedQuery = new byte[58];
-        String[] split = query.split("\\.");
-        int counter = 12;
-        //FIX THIS SHIT
-        int queryId = (int) (Math.random() * 255);
-        encodedQuery[1] = (byte) queryId;
-        encodedQuery[2] = 0;
-        encodedQuery[3] = 0;
-        encodedQuery[5] = 1;
-        for (int i = 0; i < split.length; i++) {
-            encodedQuery[counter] = (byte) split[i].length();
-            counter++;
-            for (int j = 0; j < split[i].length(); j++) {
-                String a = split[i];
-                char c = a.charAt(j);
-                String hexForAscii = Integer.toHexString((int) c);
-                byte test = Byte.parseByte(hexForAscii, 16);
-                encodedQuery[counter] = test;
+
+        try {
+            String[] split = query.split("\\.");
+            int counter = 12;
+            //FIX THIS SHIT
+            int queryId = (int) (Math.random() * 255);
+            encodedQuery[1] = (byte) queryId;
+            encodedQuery[2] = 0;
+            encodedQuery[3] = 0;
+            encodedQuery[5] = 1;
+            for (int i = 0; i < split.length; i++) {
+                encodedQuery[counter] = (byte) split[i].length();
                 counter++;
+                for (int j = 0; j < split[i].length(); j++) {
+                    String a = split[i];
+                    char c = a.charAt(j);
+                    String hexForAscii = Integer.toHexString((int) c);
+                    byte test = Byte.parseByte(hexForAscii, 16);
+                    encodedQuery[counter] = test;
+                    counter++;
+                }
             }
+            encodedQuery[counter + 2] = 1;
+            encodedQuery[counter + 4] = 1;
+        }catch(Exception e){
+            e.printStackTrace();
         }
-        encodedQuery[counter + 2] = 1;
-        encodedQuery[counter + 4] = 1;
         return encodedQuery;
     }
 
@@ -93,9 +98,7 @@ public class DNSResponse {
             int ipBits = arr[innerOffset+i];
             ipAddress += ipBits + ".";
         }
-        rData.ipAddress = ipAddress;
-        //.substring(0, ipAddress.length()-2);
-        System.out.println(rData.ipAddress);
+        rData.ipAddress = ipAddress.substring(0, ipAddress.length()-1);
         return rData;
     }
 
@@ -122,6 +125,17 @@ public class DNSResponse {
         }
         offset += qname.length() + 4;
         rData r = readRDATA(response, 37);
+        //SHOULD BE TYPE BUT SOMEHOW NAME
+        if(r.name == 1 || r.name  == 2){
+            try {
+                InetAddress rDataIP = InetAddress.getByName(r.ipAddress);
+                DNSlookup temp = new DNSlookup();
+                System.out.println(rDataIP);
+                temp.DNSLookup("www.ugrad.cs.ubc.ca", rDataIP);
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+        }
         return "";
     }
 
