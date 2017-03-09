@@ -38,6 +38,20 @@ public class DNSResponse {
         return;
     }
 
+    public static String getString(byte[] arr, int offset, int count){
+        String result = "";
+        for(int i = 0; i < count; i++){
+            char c = (char) arr[offset+i];
+            result+= c;
+        }
+        return result+".";
+    }
+
+    public int convertBytesToInt (byte [] arr, int offset)      // unsigned
+    {
+        return (arr[offset] & 0xFF) << 8 | (arr[offset+1] & 0xFF);
+    }
+
     byte[] encodeQuery(String query) {
         byte[] encodedQuery = new byte[58];
         String[] split = query.split("\\.");
@@ -65,20 +79,6 @@ public class DNSResponse {
         return encodedQuery;
     }
 
-    public int convertBytesToInt (byte [] arr, int offset)      // unsigned
-    {
-        return (arr[offset] & 0xFF) << 8 | (arr[offset+1] & 0xFF);
-    }
-
-    public static String getString(byte[] arr, int offset, int count){
-        String result = "";
-        for(int i = 0; i < count; i++){
-            char c = (char) arr[offset+i];
-            result+= c;
-        }
-        return result+".";
-    }
-
     public rData readRDATA(byte [] arr, int offset){
         rData rData = new rData();
         rData.name = this.convertBytesToInt(arr, offset);
@@ -88,7 +88,6 @@ public class DNSResponse {
         rData.rdLength = this.convertBytesToInt(arr, offset+10);
         int innerOffset = offset+12;
         String ipAddress = "";
-        System.out.println(offset +" " +innerOffset + " "+ rData.rdLength);
         for (int i = 0; i < 4; i++)
         {
             int ipBits = arr[innerOffset+i];
@@ -122,7 +121,6 @@ public class DNSResponse {
             counterForDot = response[offset+qname.length()];
         }
         offset += qname.length() + 4;
-        System.out.println(qname + "   " + offset);
         rData r = readRDATA(response, 37);
         return "";
     }

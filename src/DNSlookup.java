@@ -16,12 +16,34 @@ public class DNSlookup {
 
     static final int MIN_PERMITTED_ARGUMENT_COUNT = 2;
     static final int MAX_PERMITTED_ARGUMENT_COUNT = 3;
-
+	private DatagramSocket serverSocket;
+	private DNSResponse response;
+	/**
+	 * Constructor
+	 */
 	DNSlookup(){
 		try {
-			DatagramSocket serverSocket = new DatagramSocket(9876);
+			this.serverSocket = new DatagramSocket(9876);
+			this.response = new DNSResponse(); // Just to force compilation
 		}catch(Exception e)
 		{}
+	}
+
+	public void DNSLookup(String url, InetAddress rootNameServer){
+		byte[] receiveData = new byte[1024];
+		byte[] sendData = this.response.encodeQuery(url);
+		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, rootNameServer, 53);
+		DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+		try {
+			this.serverSocket.send(sendPacket);
+			this.serverSocket.receive(receivePacket);
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		byte[] receiveBytes = receivePacket.getData();
+		this.response.decodeQuery(receiveBytes);
+
+		this.serverSocket.close();
 	}
 
 	/**
@@ -29,22 +51,12 @@ public class DNSlookup {
      */
     public static void main(String[] args) throws Exception {
 	String fqdn;
-	DNSResponse response = new DNSResponse(); // Just to force compilation
+	DNSlookup looker = new DNSlookup();
 
 	int argCount = args.length;
 	boolean tracingOn = false;
 	boolean IPV6Query = false;
 	InetAddress rootNameServer;
-
-
-	//byte [] sendArr = (encodeQuery("www.google.com"));
-	//for (int i = 0; i < sendArr.length; i++){
-	//	System.out.println(sendArr[i]);
-	//}
-
-	byte[] test = {0xe, 0x0C};
-    int test1 = response.convertBytesToInt(test, 0);
-    System.out.println("BYTE TEST" + test1);
 
 	if (argCount < MIN_PERMITTED_ARGUMENT_COUNT || argCount > MAX_PERMITTED_ARGUMENT_COUNT) {
 	    usage();
@@ -52,10 +64,9 @@ public class DNSlookup {
 	}
 
 	rootNameServer = InetAddress.getByName(args[0]);
-	InetAddress finalIPAdd = InetAddress.getByName(args[1]);
+//	InetAddress finalIPAdd = InetAddress.getByName(args[1]);
 	fqdn = args[1];
 
-	//	System.out.println(finalIPAdd);
 	if (argCount == 3) {  // option provided
 		if (args[2].equals("-t"))
 			tracingOn = true;
@@ -70,44 +81,37 @@ public class DNSlookup {
 		}
 	}
 
-	// Start adding code here to initiate the lookup
-		//System.out.println(rootNameServer);
-		DatagramSocket serverSocket = new DatagramSocket(9876);
-		byte[] receiveData = new byte[1024];
-		//byte[] sendData = {0x2b,0x2b, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  0x03, 0x77, 0x77, 119, 0x05, 0x75, 0x67, 0x72, 0x61, 0x64, 0x02, 0x63, 0x73, 0x03, 0x75, 0x62, 0x63, 0x02, 0x63, 0x61,0x00,0x00,0x01,0x00,0x01};
-		byte[] sendData = response.encodeQuery(args[1]);
+//		byte[] receiveData = new byte[1024];
+//		byte[] sendData = {0x2b,0x2b, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  0x03, 0x77, 0x77, 119, 0x05, 0x75, 0x67, 0x72, 0x61, 0x64, 0x02, 0x63, 0x73, 0x03, 0x75, 0x62, 0x63, 0x02, 0x63, 0x61,0x00,0x00,0x01,0x00,0x01};
+//		byte[] sendData = looker.response.encodeQuery(args[1]);
 
-
-
-		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, rootNameServer, 53);
-		DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
-
-		serverSocket.send(sendPacket);
-		serverSocket.receive(receivePacket);
+//		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, rootNameServer, 53);
+//		DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+//
+//		looker.serverSocket.send(sendPacket);
+//		looker.serverSocket.receive(receivePacket);
 
 		int counter = 0;
 		int queryID1;
 		int queryID2;
-		byte[] testbyte = receivePacket.getData();
-		for(byte c: testbyte){
-			switch (counter) {
-				case 0:
-					queryID1 = c;
-					break;
-				case 1:
-					queryID2 = c;
-					break;
 
+		looker.DNSLookup(args[1], rootNameServer);
+//		byte[] receiveBytes = receivePacket.getData();
+//		for(byte c: receiveBytes){
+//			switch (counter) {
+//				case 0:
+//					queryID1 = c;
+//					break;
+//				case 1:
+//					queryID2 = c;
+//					break;
+//			}
+//			//System.out.format("%x\n",c);
+//			counter++;
+//		}
+//		looker.response.decodeQuery(receiveBytes);
 
-
-			}
-			//System.out.format("%x\n",c);
-			counter++;
-		}
-		String h = response.decodeQuery(testbyte);
-
-
-		serverSocket.close();
+//		looker.serverSocket.close();
 	
     }
 
