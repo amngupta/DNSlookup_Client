@@ -18,7 +18,7 @@ public class DNSResponse {
     private boolean decoded = false;      // Was this response successfully decoded
     private int nsCount = 0;              // number of nscount response records
     private int additionalCount = 0;      // number of additional (alternate) response records
-    private boolean authoritative = false;// Is this an authoritative record
+    protected boolean authoritative = false;// Is this an authoritative record
 
     // Note you will almost certainly need some additional instance variables.
     class rData{
@@ -128,8 +128,10 @@ public class DNSResponse {
  * Decoder in JS:
  * https://github.com/mafintosh/dns-packet/blob/master/index.js
  * */
-    String decodeQuery(byte[] response, DNSlookup looker){
-        InetAddress s;
+    InetAddress decodeQuery(byte[] response, DNSlookup looker) throws  Exception{
+
+        byte[] defaultadd = new byte[4];
+        InetAddress s = InetAddress.getByAddress(defaultadd);
         String qname = "";
         int counter = 0;
         this.queryID = this.convertBytesToInt(response, 0);
@@ -155,7 +157,8 @@ public class DNSResponse {
         offset +=5;
         if(this.answerCount >= 1){
             //FOR ANSWER
-            return "Answer";
+            this.authoritative = true;
+            //return s;
         }
         int totalCount = this.nsCount + this.additionalCount;
         ArrayList<rData> rDataList = new ArrayList<rData>();
@@ -190,7 +193,7 @@ public class DNSResponse {
         }
 
 
-        return "";
+        return s;
     }
 
 

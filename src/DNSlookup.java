@@ -33,7 +33,8 @@ public class DNSlookup {
 		{}
 	}
 
-	public void DNSLookup(String url, InetAddress rootNameServer){
+	public InetAddress DNSLookup(String url, InetAddress rootNameServer) throws Exception{
+		InetAddress nextIP;
 		byte[] receiveData = new byte[1024];
 		// Some problem here when calling in decodeResponse
 		byte[] sendData = this.response.encodeQuery(url);
@@ -46,8 +47,11 @@ public class DNSlookup {
 			e.printStackTrace();
 		}
 		byte[] receiveBytes = receivePacket.getData();
-		this.response.decodeQuery(receiveBytes, this);
+		nextIP =this.response.decodeQuery(receiveBytes, this);
+
 		this.serverSocket.close();
+
+		return nextIP;
 	}
 
 	/**
@@ -83,6 +87,11 @@ public class DNSlookup {
 		}
 	}
 		looker.DNSLookup(args[1], rootNameServer);
+		//System.out.print(rootNameServer);
+		while(!looker.response.authoritative) {
+			rootNameServer = looker.DNSLookup(args[1],rootNameServer);
+		}
+
     }
 
     
