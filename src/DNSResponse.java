@@ -93,7 +93,8 @@ public class DNSResponse {
         rData.rdLength = this.convertBytesToInt(arr, offset+10);
         int innerOffset = offset+12;
         String ipAddress = "";
-        for (int i = 0; i < 4; i++)
+        System.out.println(rData.rdLength);
+        for (int i = 0; i < rData.rdLength; i++)
         {
             int ipBits = arr[innerOffset+i];
             ipAddress += ipBits + ".";
@@ -111,22 +112,35 @@ public class DNSResponse {
  * */
     String decodeQuery(byte[] response){
         String qname = "";
-        int counter = 12;
+//        int counter = 12;
         this.queryID = this.convertBytesToInt(response, 0);
         int questionCount = this.convertBytesToInt(response, 4);
         this.answerCount = this.convertBytesToInt(response, 6);
         this.nsCount = this.convertBytesToInt(response,8);
         this.additionalCount = this.convertBytesToInt(response, 10);
         int offset = 12;
-        int counterForDot = response[offset];
-        while (response[counterForDot] != 0){
-            qname += getString(response, offset, counterForDot);
-            counterForDot = response[offset+qname.length()];
+        while (response[offset] != 0){
+            offset++;
         }
-        offset += qname.length() + 4;
-        rData r = readRDATA(response, 37);
+        System.out.println(offset + " " +response[offset+1]);
+        int queryType = this.convertBytesToInt(response, offset+1);
+        int queryClass = this.convertBytesToInt(response, offset+3);
+        offset +=5;
+        System.out.println(offset);
+        rData r = readRDATA(response, offset);
         //SHOULD BE TYPE BUT SOMEHOW NAME
-        if(r.name == 1 || r.name  == 2){
+        System.out.println(r.type + "  "+r.classInt );
+        if(r.type == 1 && r.classInt == 1){
+            return r.ipAddress ;
+        }
+        if(this.answerCount >= 1){
+            //FOR ANSWER
+            return "Answer";
+        }
+        int totalCount = this.nsCount + this.additionalCount;
+//        rData[totalCount]
+        // DNS Lookup for the returned NS
+        if(r.type  == 2){
             try {
                 InetAddress rDataIP = InetAddress.getByName(r.ipAddress);
                 DNSlookup temp = new DNSlookup();
