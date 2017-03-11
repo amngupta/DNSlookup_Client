@@ -38,6 +38,7 @@ public class DNSlookup {
 		byte[] receiveData = new byte[1024];
 		// Some problem here when calling in decodeResponse
 		byte[] sendData = this.response.encodeQuery(url);
+		this.dnsString = rootNameServer.toString();
 		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, rootNameServer, 53);
 		DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 		try {
@@ -49,7 +50,7 @@ public class DNSlookup {
 		byte[] receiveBytes = receivePacket.getData();
 		nextIP =this.response.decodeQuery(receiveBytes, this);
 
-		this.serverSocket.close();
+
 
 		return nextIP;
 	}
@@ -86,11 +87,12 @@ public class DNSlookup {
 			return;
 		}
 	}
-		looker.DNSLookup(args[1], rootNameServer);
+//		looker.DNSLookup(looker.queryString, rootNameServer);
 		//System.out.print(rootNameServer);
 		while(!looker.response.authoritative) {
-			rootNameServer = looker.DNSLookup(args[1],rootNameServer);
+			rootNameServer = looker.DNSLookup(looker.queryString,rootNameServer);
 		}
+		looker.serverSocket.close();
 
     }
 
