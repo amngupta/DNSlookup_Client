@@ -50,8 +50,6 @@ public class DNSlookup {
 		byte[] receiveBytes = receivePacket.getData();
 		nextIP =this.response.decodeQuery(receiveBytes, this);
 
-
-
 		return nextIP;
 	}
 
@@ -94,7 +92,6 @@ public class DNSlookup {
 
     }
 
-    
     private static void usage() {
 	System.out.println("Usage: java -jar DNSlookup.jar rootDNS name [-6|-t|t6]");
 	System.out.println("   where");

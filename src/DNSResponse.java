@@ -102,9 +102,9 @@ public class DNSResponse {
         rData rData = new rData();
 
         if ((arr[offset] & 0xFF) == 192){
-            System.out.print("h");
+//            System.out.print("h");
             int npointer = arr[arr[offset+1] + 1 & 0xFF]  & 0xFF;
-            System.out.println(npointer);
+//            System.out.println(npointer);
             rData.name = "";
             byte[] nameb = new byte[128];
 
@@ -119,7 +119,7 @@ public class DNSResponse {
                 }
             try {
                 rData.name = new String(nameb, "ASCII");
-                System.out.println(rData.name);
+//                System.out.println(rData.name);
             } catch (Exception E) {
             }
 
@@ -202,16 +202,17 @@ public class DNSResponse {
             this.authoritative = true;
             //return s;
         }
-        int totalCount = this.nsCount + this.additionalCount;
+        int totalCount = this.nsCount + this.additionalCount +this.answerCount;
         ArrayList<rData> rDataList = new ArrayList<rData>();
-        if(looker.tracingOn){
-            System.out.println("  Nameservers ("+this.nsCount+")");
-        }
+
         for (int i = 0; i < totalCount; i++){
             rData r = readRDATA(response, offset);
             offset += r.totalOffset;
             if(looker.tracingOn){
-                if(i == this.nsCount){
+                if(i == this.answerCount) {
+                    System.out.println("  Nameservers (" + this.nsCount + ")");
+                }
+                if(i == this.nsCount+this.answerCount){
                     System.out.println("  Additional Information ("+this.additionalCount+")");
                 }
 
