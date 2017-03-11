@@ -13,7 +13,7 @@ public class DNSResponse {
     // Note you will almost certainly need some additional instance variables.
     class rData{
         InetAddress ipAddress;
-        int name;
+        String name;
         int type;
         int classInt;
         long ttl;
@@ -66,6 +66,7 @@ public class DNSResponse {
     }
 
     byte[] encodeQuery(String query) {
+
         byte[] encodedQuery = new byte[58];
 
         try {
@@ -97,9 +98,33 @@ public class DNSResponse {
         return encodedQuery;
     }
 
-    public rData readRDATA(byte [] arr, int offset){
+    public rData readRDATA (byte [] arr, int offset){
         rData rData = new rData();
-        rData.name = this.convertBytesToInt(arr, offset);
+
+        if ((arr[offset] & 0xFF) == 192){
+            System.out.print("h");
+            int npointer = arr[arr[offset+1] + 1 & 0xFF]  & 0xFF;
+            System.out.println(npointer);
+            rData.name = "";
+            byte[] nameb = new byte[128];
+
+            for (int i  = 0; i< 50; i++) {
+                if ((arr[arr[offset + 1] + i &0xFF ]   & 0xFF) == 0) break;
+
+                if ((arr[arr[offset + 1] + i + 1 &0xFF]) > 30) {
+                    nameb[i] = arr[arr[offset+1] + i + 1 & 0xff];
+                } else {
+                    nameb[i] = 0x2e;
+                }
+                }
+            try {
+                rData.name = new String(nameb, "ASCII");
+                System.out.println(rData.name);
+            } catch (Exception E) {
+            }
+
+
+        }
         rData.type = this.convertBytesToInt(arr, offset+2);
         rData.classInt = this.convertBytesToInt(arr, offset+4);
         rData.ttl = this.convert4BytesToInt(arr, offset+6);
