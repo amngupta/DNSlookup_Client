@@ -2,16 +2,6 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.ArrayList;
 
-
-// Lots of the action associated with handling a DNS query is processing
-// the response. Although not required you might find the following skeleton of
-// a DNSreponse helpful. The class below has bunch of instance data that typically needs to be 
-// parsed from the response. If you decide to use this class keep in mind that it is just a 
-// suggestion and feel free to add or delete methods to better suit your implementation as 
-// well as instance variables.
-
-
-
 public class DNSResponse {
     private int queryID;                  // this is for the response it must match the one in the request 
     private int answerCount = 0;          // number of answers  
@@ -153,13 +143,6 @@ public class DNSResponse {
         return rData;
     }
 
-    /**
- * SAMPLE DNS RESPONSE:
- * 5F 9F 84 00 00 01 00 01 00 02 00 02 03 77 77 77 05 75 67 72 61 64 02 63 73 03 75 62 63 02 63 61 00 00 01 00 01 C0 0C 00 01 00 01 00 00 0E 10 00 04 8E 67 06 2B C0 10 00 02 00 01 00 00 0E 10 00 06 03 66 73 31 C0 10 C0 10 00 02 00 01 00 00 0E 10 00 06 03 6E 73 31 C0 16 C0 41 00 01 00 01 00 00 0E 10 00 04 C6 A2 23 01 C0 53 00 01 00 01 00 00 0E 10 00 04 8E 67 06 06
- * https://www.gasmi.net/hpd/
- * Decoder in JS:
- * https://github.com/mafintosh/dns-packet/blob/master/index.js
- * */
     InetAddress decodeQuery(byte[] response, DNSlookup looker) throws  Exception{
 
         byte[] defaultadd = new byte[4];
@@ -235,45 +218,6 @@ public class DNSResponse {
 
         return s;
     }
-
-
-
-	void dumpResponse() {
-
-
-	}
-
-    // The constructor: you may want to add additional parameters, but the two shown are 
-    // probably the minimum that you need.
-
-	public DNSResponse (byte[] data, int len) {
-	    
-	    // The following are probably some of the things 
-	    // you will need to do.
-	    // Extract the query ID
-
-	    // Make sure the message is a query response and determine
-	    // if it is an authoritative response or note
-
-	    // determine answer count
-
-	    // determine NS Count
-
-	    // determine additional record count
-
-	    // Extract list of answers, name server, and additional information response 
-	    // records
-	}
-
-
-    // You will probably want a methods to extract a compressed FQDN, IP address
-    // cname, authoritative DNS servers and other values like the query ID etc.
-
-
-    // You will also want methods to extract the response records and record
-    // the important values they are returning. Note that an IPV6 reponse record
-    // is of type 28. It probably wouldn't hurt to have a response record class to hold
-    // these records. 
 }
 
 
