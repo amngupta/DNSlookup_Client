@@ -128,7 +128,7 @@ public class DNSResponse {
  * Decoder in JS:
  * https://github.com/mafintosh/dns-packet/blob/master/index.js
  * */
-    String decodeQuery(byte[] response){
+    String decodeQuery(byte[] response, DNSlookup looker){
         InetAddress s;
         String qname = "";
         int counter = 0;
@@ -141,13 +141,18 @@ public class DNSResponse {
         while (response[offset] != 0){
             offset++;
         }
-        System.out.println(offset + " " +response[offset+1]);
+        if(looker.tracingOn){
+            String queryType = "A";
+            if(looker.IPV6Query){
+                queryType = "AAAA";
+            }
+            System.out.println();
+            System.out.println();
+            System.out.println("Query ID     "+this.queryID+" "+" "+looker.queryString+"  "+queryType+" --> "+looker.dnsString);
+        }
         int queryType = this.convertBytesToInt(response, offset+1);
         int queryClass = this.convertBytesToInt(response, offset+3);
         offset +=5;
-        System.out.println(offset);
-        //SHOULD BE TYPE BUT SOMEHOW NAME
-
         if(this.answerCount >= 1){
             //FOR ANSWER
             return "Answer";
@@ -157,20 +162,12 @@ public class DNSResponse {
         for (int i = 0; i < totalCount; i++){
             rData r = readRDATA(response, offset);
             offset += r.totalOffset;
-            System.out.println(r.type + "  "+r.classInt +" "+offset+"  "+r.ipAddress);
+            if(looker.tracingOn){
+                System.out.println(r.type + "  "+r.classInt +" "+offset+"  "+r.ipAddress);
+            }
             rDataList.add(r);
         }
         // DNS Lookup for the returned NS
-//        if(r.type  == 2){
-//            try {
-//                InetAddress rDataIP = InetAddress.getByName(r.ipAddress);
-//                DNSlookup temp = new DNSlookup();
-//                System.out.println(rDataIP);
-//                temp.DNSLookup("www.ugrad.cs.ubc.ca", rDataIP);
-//            }catch(Exception e){
-//                e.printStackTrace();
-//            }
-//        }
 
         byte[] nextIp = new byte[4];
         for(byte c: response) {
@@ -187,7 +184,7 @@ public class DNSResponse {
         }
         try {
             s = InetAddress.getByAddress(nextIp);
-            System.out.print(s);
+//            System.out.print(s);
         }
         catch (Exception e) {
         }

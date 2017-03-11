@@ -18,8 +18,10 @@ public class DNSlookup {
     static final int MAX_PERMITTED_ARGUMENT_COUNT = 3;
 	private DatagramSocket serverSocket;
 	private DNSResponse response;
-	private boolean tracingOn = false;
-	private boolean IPV6Query = false;
+	protected boolean tracingOn = false;
+	protected boolean IPV6Query = false;
+	protected String queryString;
+	protected String dnsString;
 	/**
 	 * Constructor
 	 */
@@ -44,7 +46,7 @@ public class DNSlookup {
 			e.printStackTrace();
 		}
 		byte[] receiveBytes = receivePacket.getData();
-		this.response.decodeQuery(receiveBytes);
+		this.response.decodeQuery(receiveBytes, this);
 		this.serverSocket.close();
 	}
 
@@ -63,10 +65,11 @@ public class DNSlookup {
 	    return;
 	}
 
-	rootNameServer = InetAddress.getByName(args[0]);
-	fqdn = args[1];
+	looker.queryString = args[1];
+	looker.dnsString = args[0];
+	rootNameServer = InetAddress.getByName(looker.dnsString);
 
-	if (argCount == 3) {  // option provided
+		if (argCount == 3) {  // option provided
 		if (args[2].equals("-t"))
 			looker.tracingOn = true;
 		else if (args[2].equals("-6"))
