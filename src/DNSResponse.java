@@ -129,8 +129,9 @@ public class DNSResponse {
  * https://github.com/mafintosh/dns-packet/blob/master/index.js
  * */
     String decodeQuery(byte[] response){
+        InetAddress s;
         String qname = "";
-//        int counter = 12;
+        int counter = 0;
         this.queryID = this.convertBytesToInt(response, 0);
         int questionCount = this.convertBytesToInt(response, 4);
         this.answerCount = this.convertBytesToInt(response, 6);
@@ -170,6 +171,28 @@ public class DNSResponse {
 //                e.printStackTrace();
 //            }
 //        }
+
+        byte[] nextIp = new byte[4];
+        for(byte c: response) {
+            if (c == 1)
+                if (response[counter+2] == 1)
+                    if(response[counter+8] == 4){
+                        nextIp[0] = response[counter+9];
+                        nextIp[1] = response[counter+10];
+                        nextIp[2] = response[counter+11];
+                        nextIp[3] = response[counter+12];
+                        break;
+                    }
+            counter++;
+        }
+        try {
+            s = InetAddress.getByAddress(nextIp);
+            System.out.print(s);
+        }
+        catch (Exception e) {
+        }
+
+
         return "";
     }
 
