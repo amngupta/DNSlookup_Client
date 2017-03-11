@@ -1,4 +1,4 @@
-import java.awt.*;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.ArrayList;
 
@@ -38,7 +38,7 @@ public class DNSResponse {
         return;
     }
 
-    public static String getString(byte[] arr, int offset, int count){
+    private static String getString(byte[] arr, int offset, int count){
         String result = "";
         for(int i = 0; i < count; i++){
             char c = (char) arr[offset+i];
@@ -47,9 +47,32 @@ public class DNSResponse {
         return result+".";
     }
 
-    public int convertBytesToInt (byte [] arr, int offset)      // unsigned
+    private int convertBytesToInt (byte [] arr, int offset)      // unsigned
     {
         return (arr[offset] & 0xFF) << 8 | (arr[offset+1] & 0xFF);
+    }
+
+    private int convert4BytesToInt(byte[] bytes, int offset) {
+        return bytes[offset] << 24 | (bytes[offset+1] & 0xFF) << 16 | (bytes[offset+2] & 0xFF) << 8 | (bytes[offset+3] & 0xFF);
+    }
+
+    private static String getActualType(int i){
+        String actualType = "";
+        switch (i){
+            case 1:{
+                actualType = "A";
+                break;
+            }
+            case 2:{
+                actualType = "NS";
+                break;
+            }
+            case 28:{
+                actualType = "AAAA";
+                break;
+            }
+        }
+        return actualType;
     }
 
     byte[] encodeQuery(String query) {
@@ -89,11 +112,11 @@ public class DNSResponse {
         rData.name = this.convertBytesToInt(arr, offset);
         rData.type = this.convertBytesToInt(arr, offset+2);
         rData.classInt = this.convertBytesToInt(arr, offset+4);
-        //rData.ttl //NEED TO CONVERT NEXT 4 bytes to ttl - 6-9
+        rData.ttl = this.convert4BytesToInt(arr, offset+6);
         rData.rdLength = this.convertBytesToInt(arr, offset+10);
         int innerOffset = offset+12;
         String ipAddress = "";
-        if(rData.type == 1 && rData.classInt == 1 && rData.rdLength == 4){
+        if(rData.type == 1 && rData.rdLength == 4){
             byte[] nextIp = new byte[4];
             nextIp[0] = arr[innerOffset];
             nextIp[1] = arr[innerOffset+1];
@@ -103,6 +126,15 @@ public class DNSResponse {
                 rData.ipAddress = InetAddress.getByAddress(nextIp);
             }
             catch (Exception e) {
+            }
+        }
+        if(rData.type == 28 && rData.rdLength ==16){
+            byte[] tmp2 = new byte[16];
+            System.arraycopy(arr, innerOffset, tmp2, 0, 16);
+            try {
+                rData.ipAddress= Inet6Address.getByAddress(tmp2);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
         else{
@@ -151,6 +183,8 @@ public class DNSResponse {
             System.out.println();
             System.out.println();
             System.out.println("Query ID     "+this.queryID+" "+" "+looker.queryString+"  "+queryType+" --> "+looker.dnsString);
+            System.out.println("Response ID "+this.queryID+" Authoritative = "+this.authoritative);
+            System.out.println("  Answers ("+this.answerCount+")");
         }
         int queryType = this.convertBytesToInt(response, offset+1);
         int queryClass = this.convertBytesToInt(response, offset+3);
@@ -162,15 +196,21 @@ public class DNSResponse {
         }
         int totalCount = this.nsCount + this.additionalCount;
         ArrayList<rData> rDataList = new ArrayList<rData>();
+        if(looker.tracingOn){
+            System.out.println("  Nameservers ("+this.nsCount+")");
+        }
         for (int i = 0; i < totalCount; i++){
             rData r = readRDATA(response, offset);
             offset += r.totalOffset;
             if(looker.tracingOn){
-                System.out.println(r.type + "  "+r.classInt +" "+offset+"  "+r.ipAddress);
+                if(i == this.nsCount){
+                    System.out.println("  Additional Information ("+this.additionalCount+")");
+                }
+
+                System.out.format("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ipAddress);
             }
             rDataList.add(r);
         }
-        // DNS Lookup for the returned NS
 
         byte[] nextIp = new byte[4];
         for(byte c: response) {

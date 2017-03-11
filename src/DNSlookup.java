@@ -87,8 +87,6 @@ public class DNSlookup {
 			return;
 		}
 	}
-//		looker.DNSLookup(looker.queryString, rootNameServer);
-		//System.out.print(rootNameServer);
 		while(!looker.response.authoritative) {
 			rootNameServer = looker.DNSLookup(looker.queryString,rootNameServer);
 		}
