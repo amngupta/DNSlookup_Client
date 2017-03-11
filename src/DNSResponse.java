@@ -1,9 +1,9 @@
 import java.awt.*;
 import java.net.InetAddress;
+import java.util.ArrayList;
 
 
-
-// Lots of the action associated with handling a DNS query is processing 
+// Lots of the action associated with handling a DNS query is processing
 // the response. Although not required you might find the following skeleton of
 // a DNSreponse helpful. The class below has bunch of instance data that typically needs to be 
 // parsed from the response. If you decide to use this class keep in mind that it is just a 
@@ -22,7 +22,7 @@ public class DNSResponse {
 
     // Note you will almost certainly need some additional instance variables.
     class rData{
-        String ipAddress;
+        InetAddress ipAddress;
         int name;
         int type;
         int classInt;
@@ -93,13 +93,31 @@ public class DNSResponse {
         rData.rdLength = this.convertBytesToInt(arr, offset+10);
         int innerOffset = offset+12;
         String ipAddress = "";
-        System.out.println(rData.rdLength);
-        for (int i = 0; i < rData.rdLength; i++)
-        {
-            int ipBits = arr[innerOffset+i];
-            ipAddress += ipBits + ".";
+        if(rData.type == 1 && rData.classInt == 1 && rData.rdLength == 4){
+            byte[] nextIp = new byte[4];
+            nextIp[0] = arr[innerOffset];
+            nextIp[1] = arr[innerOffset+1];
+            nextIp[2] = arr[innerOffset+2];
+            nextIp[3] = arr[innerOffset+3];
+            try {
+                rData.ipAddress = InetAddress.getByAddress(nextIp);
+            }
+            catch (Exception e) {
+            }
         }
-        rData.ipAddress = ipAddress.substring(0, ipAddress.length()-1);
+        else{
+            for (int i = 0; i < rData.rdLength; i++)
+            {
+                int ipBits = arr[innerOffset+i];
+                ipAddress += ipBits + ".";
+            }
+            try {
+                rData.ipAddress = InetAddress.getByName(ipAddress.substring(0, ipAddress.length() - 1));
+            }catch(Exception e){
+//                e.printStackTrace();
+            }
+        }
+        rData.totalOffset = 12+rData.rdLength;
         return rData;
     }
 
@@ -127,29 +145,31 @@ public class DNSResponse {
         int queryClass = this.convertBytesToInt(response, offset+3);
         offset +=5;
         System.out.println(offset);
-        rData r = readRDATA(response, offset);
         //SHOULD BE TYPE BUT SOMEHOW NAME
-        System.out.println(r.type + "  "+r.classInt );
-        if(r.type == 1 && r.classInt == 1){
-            return r.ipAddress ;
-        }
+
         if(this.answerCount >= 1){
             //FOR ANSWER
             return "Answer";
         }
         int totalCount = this.nsCount + this.additionalCount;
-//        rData[totalCount]
-        // DNS Lookup for the returned NS
-        if(r.type  == 2){
-            try {
-                InetAddress rDataIP = InetAddress.getByName(r.ipAddress);
-                DNSlookup temp = new DNSlookup();
-                System.out.println(rDataIP);
-                temp.DNSLookup("www.ugrad.cs.ubc.ca", rDataIP);
-            }catch(Exception e){
-                e.printStackTrace();
-            }
+        ArrayList<rData> rDataList = new ArrayList<rData>();
+        for (int i = 0; i < totalCount; i++){
+            rData r = readRDATA(response, offset);
+            offset += r.totalOffset;
+            System.out.println(r.type + "  "+r.classInt +" "+offset+"  "+r.ipAddress);
+            rDataList.add(r);
         }
+        // DNS Lookup for the returned NS
+//        if(r.type  == 2){
+//            try {
+//                InetAddress rDataIP = InetAddress.getByName(r.ipAddress);
+//                DNSlookup temp = new DNSlookup();
+//                System.out.println(rDataIP);
+//                temp.DNSLookup("www.ugrad.cs.ubc.ca", rDataIP);
+//            }catch(Exception e){
+//                e.printStackTrace();
+//            }
+//        }
         return "";
     }
 
