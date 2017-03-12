@@ -16,6 +16,7 @@ public class DNSResponse {
     class rData{
         String ipAddress;
         String name;
+        String ns;
         int type;
         int classInt;
         long ttl;
@@ -103,38 +104,56 @@ public class DNSResponse {
         }
         return encodedQuery;
     }
+    public byte[] getName(byte[] arr, int offset) {
+        byte[] name = new byte[512];
 
+        int i = 0;
+
+        while(true) {
+
+            if ((arr[offset] & 0xFF) == 0) {
+                return name;
+            }
+            if ((arr[offset] & 0xFF) == 192) {
+                offset = arr[offset+1];
+                continue;
+            }
+            if (arr[offset] > 40) {
+                name[i] = arr[offset];
+                i++;
+                offset++;
+                continue;
+            } else {
+                if (i != 0) {
+                    name[i] = 0x2e;
+                    i++;
+                    offset++;
+                    continue;
+                }
+                offset++;
+            }
+        }
+
+
+    }
     public rData readRDATA (byte [] arr, int offset){
         rData rData = new rData();
 
-        if ((arr[offset] & 0xFF) == 192){
-//            System.out.print("h");
-            int npointer = arr[arr[offset+1] + 1 & 0xFF]  & 0xFF;
-//            System.out.println(npointer);
-            rData.name = "";
-            byte[] nameb = new byte[128];
-
-            for (int i  = 0; i< 50; i++) {
-                if ((arr[arr[offset + 1] + i &0xFF ]   & 0xFF) == 0) break;
-
-                if ((arr[arr[offset + 1] + i + 1 &0xFF]) > 30) {
-                    nameb[i] = arr[arr[offset+1] + i + 1 & 0xff];
-                } else {
-                    nameb[i] = 0x2e;
-                }
-                }
-            try {
-                rData.name = new String(nameb, "ASCII");
-//                System.out.println(rData.name);
-            } catch (Exception E) {
-            }
+        try {
+            String nameString  =  new String(getName(arr,offset), "UTF-8");
+            rData.name = nameString;
+            String nsString = new String(getName(arr,offset+11), "UTF-8");
+            rData.ns = nsString;
 
 
+        } catch (Exception e){
         }
         rData.type = this.convertBytesToInt(arr, offset+2);
         rData.classInt = this.convertBytesToInt(arr, offset+4);
         rData.ttl = this.convert4BytesToInt(arr, offset+6);
+
         rData.rdLength = this.convertBytesToInt(arr, offset+10);
+
         int innerOffset = offset+12;
         String ipAddress = "";
         if(rData.type == 1 && rData.rdLength == 4){
@@ -218,8 +237,11 @@ public class DNSResponse {
                 if(i == this.nsCount+this.answerCount){
                     System.out.println("  Additional Information ("+this.additionalCount+")");
                 }
-
-                System.out.format("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ipAddress);
+                if(i >= answerCount & i < (answerCount+nsCount)) {
+                    System.out.format("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ns);
+                } else {
+                    System.out.format("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ipAddress);
+                }
             }
             rDataList.add(r);
         }
