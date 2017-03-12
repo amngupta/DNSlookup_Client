@@ -82,10 +82,15 @@ public class DNSlookup {
                 return;
             }
         }
+        int queries = 0;
 	    boolean checker = true;
 		DNSResponse.rData nextRes = looker.DNSLookup(looker.queryString,rootNameServer);
 		while(checker) {
+		    if (queries > 30) {
+		        System.out.println(looker.queryString+", -3, 0.0.0.0");
+            }
             nextRes = looker.DNSLookup(looker.queryString, InetAddress.getByName(nextRes.ipAddress));
+            queries++;
             if (looker.response.answerCount > 0) {
                 if(nextRes.type == 1 || nextRes.type == 2){
                     checker = false;
@@ -95,6 +100,7 @@ public class DNSlookup {
                 }
             }
         }
+
 		looker.serverSocket.close();
 
     }

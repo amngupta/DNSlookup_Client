@@ -217,7 +217,7 @@ public class DNSResponse {
             }
             System.out.println();
             System.out.println();
-            System.out.println("Query ID     "+this.queryID+" "+" "+looker.queryString+"  "+queryType+" --> "+looker.dnsString);
+            System.out.println("Query ID     "+this.queryID+" "+" "+looker.queryString+"  "+queryType+" --> "+looker.dnsString.toString().replaceAll("[/]",""));
             System.out.println("Response ID "+this.queryID+" Authoritative = "+this.authoritative);
             System.out.println("  Answers ("+this.answerCount+")");
         }
