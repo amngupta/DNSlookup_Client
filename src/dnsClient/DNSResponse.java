@@ -1,10 +1,12 @@
+package dnsClient;
+
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.ArrayList;
 
 public class DNSResponse {
     private int queryID;                  // this is for the response it must match the one in the request 
-    private int answerCount = 0;          // number of answers  
+    protected int answerCount = 0;          // number of answers
     private boolean decoded = false;      // Was this response successfully decoded
     private int nsCount = 0;              // number of nscount response records
     private int additionalCount = 0;      // number of additional (alternate) response records
@@ -12,7 +14,7 @@ public class DNSResponse {
 
     // Note you will almost certainly need some additional instance variables.
     class rData{
-        InetAddress ipAddress;
+        String ipAddress;
         String name;
         int type;
         int classInt;
@@ -59,6 +61,10 @@ public class DNSResponse {
             }
             case 28:{
                 actualType = "AAAA";
+                break;
+            }
+            case 5:{
+                actualType = "CN";
                 break;
             }
         }
@@ -138,7 +144,7 @@ public class DNSResponse {
             nextIp[2] = arr[innerOffset+2];
             nextIp[3] = arr[innerOffset+3];
             try {
-                rData.ipAddress = InetAddress.getByAddress(nextIp);
+                rData.ipAddress = InetAddress.getByAddress(nextIp).toString().replaceAll("[/]","");
             }
             catch (Exception e) {
             }
@@ -147,7 +153,7 @@ public class DNSResponse {
             byte[] tmp2 = new byte[16];
             System.arraycopy(arr, innerOffset, tmp2, 0, 16);
             try {
-                rData.ipAddress= Inet6Address.getByAddress(tmp2);
+                rData.ipAddress= Inet6Address.getByAddress(tmp2).toString().replaceAll("[/]","");
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -159,7 +165,7 @@ public class DNSResponse {
                 ipAddress += ipBits + ".";
             }
             try {
-                rData.ipAddress = InetAddress.getByName(ipAddress.substring(0, ipAddress.length() - 1));
+                rData.ipAddress = InetAddress.getByName(ipAddress.substring(0, ipAddress.length() - 1)).toString();
             }catch(Exception e){
 //                e.printStackTrace();
             }
@@ -168,8 +174,7 @@ public class DNSResponse {
         return rData;
     }
 
-    InetAddress decodeQuery(byte[] response, DNSlookup looker) throws  Exception{
-
+    rData decodeQuery(byte[] response, DNSlookup looker) throws  Exception{
         byte[] defaultadd = new byte[4];
         InetAddress s = InetAddress.getByAddress(defaultadd);
         String qname = "";
@@ -182,6 +187,9 @@ public class DNSResponse {
         int offset = 12;
         while (response[offset] != 0){
             offset++;
+        }
+        if(this.answerCount >= 1){
+            this.authoritative = true;
         }
         if(looker.tracingOn){
             String queryType = "A";
@@ -197,11 +205,6 @@ public class DNSResponse {
         int queryType = this.convertBytesToInt(response, offset+1);
         int queryClass = this.convertBytesToInt(response, offset+3);
         offset +=5;
-        if(this.answerCount >= 1){
-            //FOR ANSWER
-            this.authoritative = true;
-            //return s;
-        }
         int totalCount = this.nsCount + this.additionalCount +this.answerCount;
         ArrayList<rData> rDataList = new ArrayList<rData>();
 
@@ -220,29 +223,15 @@ public class DNSResponse {
             }
             rDataList.add(r);
         }
-
-        byte[] nextIp = new byte[4];
-        for(byte c: response) {
-            if (c == 1)
-                if (response[counter+2] == 1)
-                    if(response[counter+8] == 4){
-                        nextIp[0] = response[counter+9];
-                        nextIp[1] = response[counter+10];
-                        nextIp[2] = response[counter+11];
-                        nextIp[3] = response[counter+12];
-                        break;
-                    }
-            counter++;
+        for(rData c: rDataList) {
+            if(this.answerCount >= 1){
+                return rDataList.get(0);
+            }
+            if(c.type == 1){
+                return c;
+            }
         }
-        try {
-            s = InetAddress.getByAddress(nextIp);
-//            System.out.print(s);
-        }
-        catch (Exception e) {
-        }
-
-
-        return s;
+        return null;
     }
 }
 

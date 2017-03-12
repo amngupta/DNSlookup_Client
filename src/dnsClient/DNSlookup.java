@@ -1,7 +1,6 @@
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
+package dnsClient;
+
 import java.net.*;
-import java.util.Random;
 
 /**
  * 
@@ -22,7 +21,8 @@ public class DNSlookup {
 	protected boolean IPV6Query = false;
 	protected String queryString;
 	protected String dnsString;
-	/**
+
+        /**
 	 * Constructor
 	 */
 	DNSlookup(){
@@ -33,8 +33,7 @@ public class DNSlookup {
 		{}
 	}
 
-	public InetAddress DNSLookup(String url, InetAddress rootNameServer) throws Exception{
-		InetAddress nextIP;
+	public DNSResponse.rData DNSLookup(String url, InetAddress rootNameServer) throws Exception{
 		byte[] receiveData = new byte[1024];
 		// Some problem here when calling in decodeResponse
 		byte[] sendData = this.response.encodeQuery(url);
@@ -48,10 +47,8 @@ public class DNSlookup {
 			e.printStackTrace();
 		}
 		byte[] receiveBytes = receivePacket.getData();
-		nextIP =this.response.decodeQuery(receiveBytes, this);
-
-		return nextIP;
-	}
+        return this.response.decodeQuery(receiveBytes, this);
+    }
 
 	/**
      * @param args
@@ -71,23 +68,33 @@ public class DNSlookup {
 	looker.queryString = args[1];
 	looker.dnsString = args[0];
 	rootNameServer = InetAddress.getByName(looker.dnsString);
-
 		if (argCount == 3) {  // option provided
-		if (args[2].equals("-t"))
-			looker.tracingOn = true;
-		else if (args[2].equals("-6"))
-			looker.IPV6Query = true;
-		else if (args[2].equals("-t6")) {
-			looker.tracingOn = true;
-			looker.IPV6Query = true;
-		} else { // option present but wasn't valid option
-			usage();
-			return;
-		}
-	}
-		while(!looker.response.authoritative) {
-			rootNameServer = looker.DNSLookup(looker.queryString,rootNameServer);
-		}
+            if (args[2].equals("-t"))
+                looker.tracingOn = true;
+            else if (args[2].equals("-6"))
+                looker.IPV6Query = true;
+            else if (args[2].equals("-t6")) {
+                looker.tracingOn = true;
+                looker.IPV6Query = true;
+            }
+            else { // option present but wasn't valid option
+                usage();
+                return;
+            }
+        }
+	    boolean checker = true;
+		DNSResponse.rData nextRes = looker.DNSLookup(looker.queryString,rootNameServer);
+		while(checker) {
+            nextRes = looker.DNSLookup(looker.queryString, InetAddress.getByName(nextRes.ipAddress));
+            if (looker.response.answerCount > 0) {
+                if(nextRes.type == 1 || nextRes.type == 2){
+                    checker = false;
+                }else {
+                    DNSlookup temp = new DNSlookup();
+                    nextRes =  temp.DNSLookup(nextRes.ipAddress, InetAddress.getByName(looker.dnsString));
+                }
+            }
+        }
 		looker.serverSocket.close();
 
     }
