@@ -49,7 +49,7 @@ public class DNSResponse {
         return bytes[offset] << 24 | (bytes[offset+1] & 0xFF) << 16 | (bytes[offset+2] & 0xFF) << 8 | (bytes[offset+3] & 0xFF);
     }
 
-    private static String getActualType(int i){
+    protected static String getActualType(int i){
         String actualType = "";
         switch (i){
             case 1:{
@@ -74,12 +74,12 @@ public class DNSResponse {
 
     byte[] encodeQuery(String query) {
 
-        byte[] encodedQuery = new byte[58];
+        byte[] encodedQuery = new byte[64];
 
         try {
+            query = query.replace(new String(Character.toChars(0)), "");
             String[] split = query.split("\\.");
             int counter = 12;
-            //FIX THIS SHIT
             int queryId = (int) (Math.random() * 255);
             encodedQuery[1] = (byte) queryId;
             encodedQuery[2] = 0;
@@ -91,10 +91,15 @@ public class DNSResponse {
                 for (int j = 0; j < split[i].length(); j++) {
                     String a = split[i];
                     char c = a.charAt(j);
-                    String hexForAscii = Integer.toHexString((int) c);
-                    byte test = Byte.parseByte(hexForAscii, 16);
-                    encodedQuery[counter] = test;
-                    counter++;
+                    try {
+                        String hexForAscii = Integer.toHexString((int) c);
+                        byte test = Byte.parseByte(hexForAscii, 16);
+                        encodedQuery[counter] = test;
+                        counter++;
+                    }catch (Exception e){
+                        e.printStackTrace();
+                        break;
+                    }
                 }
             }
             encodedQuery[counter + 2] = 1;
@@ -144,8 +149,6 @@ public class DNSResponse {
             rData.name = nameString;
             String nsString = new String(getName(arr,offset+11), "UTF-8");
             rData.ns = nsString;
-
-
         } catch (Exception e){
         }
         rData.type = this.convertBytesToInt(arr, offset+2);
@@ -163,7 +166,7 @@ public class DNSResponse {
             nextIp[2] = arr[innerOffset+2];
             nextIp[3] = arr[innerOffset+3];
             try {
-                rData.ipAddress = InetAddress.getByAddress(nextIp).toString().replaceAll("[/]","");
+                rData.ipAddress = InetAddress.getByAddress(nextIp).toString().replaceAll("[/ ]","");
             }
             catch (Exception e) {
             }
@@ -172,7 +175,7 @@ public class DNSResponse {
             byte[] tmp2 = new byte[16];
             System.arraycopy(arr, innerOffset, tmp2, 0, 16);
             try {
-                rData.ipAddress= Inet6Address.getByAddress(tmp2).toString().replaceAll("[/]","");
+                rData.ipAddress= Inet6Address.getByAddress(tmp2).toString().replaceAll("[/ ]","");
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -184,7 +187,7 @@ public class DNSResponse {
                 ipAddress += ipBits + ".";
             }
             try {
-                rData.ipAddress = InetAddress.getByName(ipAddress.substring(0, ipAddress.length() - 1)).toString();
+                rData.ipAddress = InetAddress.getByName(ipAddress.substring(0, ipAddress.length() - 1)).toString().replaceAll("[/ ]","");
             }catch(Exception e){
 //                e.printStackTrace();
             }
@@ -209,6 +212,8 @@ public class DNSResponse {
         }
         if(this.answerCount >= 1){
             this.authoritative = true;
+        }else{
+            this.authoritative = false;
         }
         if(looker.tracingOn){
             String queryType = "A";
@@ -237,11 +242,17 @@ public class DNSResponse {
                 if(i == this.nsCount+this.answerCount){
                     System.out.println("  Additional Information ("+this.additionalCount+")");
                 }
-                if(i >= answerCount & i < (answerCount+nsCount)) {
+                if(r.ipAddress == null){
                     System.out.format("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ns);
-                } else {
+                }
+                else{
                     System.out.format("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ipAddress);
                 }
+//                if(i >= answerCount & i < (answerCount+nsCount)) {
+//                    System.out.format("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ns);
+//                } else {
+//                    System.out.format("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ipAddress);
+//                }
             }
             rDataList.add(r);
         }

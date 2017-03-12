@@ -86,21 +86,31 @@ public class DNSlookup {
 	    boolean checker = true;
 		DNSResponse.rData nextRes = looker.DNSLookup(looker.queryString,rootNameServer);
 		while(checker) {
-		    if (queries > 30) {
-		        System.out.println(looker.queryString+" -3 0.0.0.0");
-            }
-            nextRes = looker.DNSLookup(looker.queryString, InetAddress.getByName(nextRes.ipAddress));
-            queries++;
+//			System.out.println(nextRes.ns +"  "+ looker.dnsString+" "+nextRes.ipAddress);
             if (looker.response.answerCount > 0) {
-                if(nextRes.type == 1 || nextRes.type == 2){
+                if(nextRes.type == 1 || nextRes.type == 28){
                     checker = false;
-                }else {
-                    DNSlookup temp = new DNSlookup();
-                    nextRes =  temp.DNSLookup(nextRes.ipAddress, InetAddress.getByName(looker.dnsString));
-                }
+                }else if(nextRes.ns.length() > 0){
+					looker.queryString = nextRes.ns;
+//					nextRes.ipAddress = args[0];
+					nextRes =  looker.DNSLookup(looker.queryString, InetAddress.getByName(args[0]));
+					queries++;
+				}
             }
+			else{
+				if(nextRes != null) {
+					nextRes = looker.DNSLookup(looker.queryString, InetAddress.getByName(nextRes.ipAddress));
+					queries++;
+				}
+			}
+			if (queries > 30) {
+				System.out.println(looker.queryString+" -3 0.0.0.0");
+				checker = false;
+			}
         }
-
+		if(looker.response.answerCount > 0){
+			System.out.println(args[1]+" "+looker.response.getActualType(nextRes.type) +  " " + nextRes.ipAddress);
+		}
 		looker.serverSocket.close();
 
     }
