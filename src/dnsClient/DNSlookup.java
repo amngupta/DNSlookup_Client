@@ -87,7 +87,7 @@ public class DNSlookup {
 		DNSResponse.rData nextRes = looker.DNSLookup(looker.queryString,rootNameServer);
 		while(checker) {
 		    if (queries > 30) {
-		        System.out.println(looker.queryString+", -3, 0.0.0.0");
+		        System.out.println(looker.queryString+" -3 0.0.0.0");
             }
             nextRes = looker.DNSLookup(looker.queryString, InetAddress.getByName(nextRes.ipAddress));
             queries++;
