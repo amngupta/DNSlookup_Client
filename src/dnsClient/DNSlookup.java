@@ -3,6 +3,7 @@ package dnsClient;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketTimeoutException;
 
 public class DNSlookup {
 
@@ -38,6 +39,7 @@ public class DNSlookup {
             this.tracingOn = isTracing;
             this.serverSocket = new DatagramSocket(socket);
             this.response = new DNSResponse(); // Just to force compilation
+            this.serverSocket.setSoTimeout(5000);
         }catch(Exception e)
         {
             e.printStackTrace();
@@ -62,7 +64,8 @@ public class DNSlookup {
             this.serverSocket.send(sendPacket);
             this.serverSocket.receive(receivePacket);
         }catch(Exception e){
-            e.printStackTrace();
+            System.out.println(this.queryString + " -2 " + "A" + " 0.0.0.0");
+
         }
         byte[] receiveBytes = receivePacket.getData();
         return this.response.decodeQuery(receiveBytes, this);
@@ -81,8 +84,13 @@ public class DNSlookup {
         boolean checker = true;
         System.out.println(this.queryString);
         while(checker) {
+            if (this.response.authoritative & this.response.answerCount ==0){
+                System.out.println(this.queryString+" A -6 0.0.0.0");
+                break;
+            }
             if (this.response.answerCount > 0) {
                 //if we have an answer
+
                 if(nextRes.type == 1 || nextRes.type == 28){
                     //if answer is of type ipV4 or ipV6
                     checker = false;
@@ -119,6 +127,7 @@ public class DNSlookup {
         if(ans.type ==1 || ans.type ==28){
             ans.finalAnswer = true;
         }
+
         this.serverSocket.close();
         return ans;
     }
@@ -160,7 +169,7 @@ public class DNSlookup {
         if (test.finalAnswer) {
             System.out.println(args[1] + " " + looker.response.getActualType(test.type) + " " + test.ipAddress);
         } else {
-            System.out.println(looker.response.getActualType(test.type) + " " + test.ipAddress);
+            //System.out.println(looker.response.getActualType(test.type) + " " + test.ipAddress);
         }
     }
 

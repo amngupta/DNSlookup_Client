@@ -281,18 +281,23 @@ public class DNSResponse {
         while (response[offset] != 0){
             offset++;
         }
-        if(this.answerCount >= 1){
+
+        int queryType = this.convertBytesToInt(response, offset+1);
+        int queryClass = this.convertBytesToInt(response, offset+3);
+
+        if(this.answerCount >= 1 || queryType == 6){
             this.authoritative = true;
         }else{
             this.authoritative = false;
         }
-        int queryType = this.convertBytesToInt(response, offset+1);
-        int queryClass = this.convertBytesToInt(response, offset+3);
         offset +=5;
         int totalCount = this.nsCount + this.additionalCount +this.answerCount;
         ArrayList<rData> rDataList = new ArrayList<rData>();
         for (int i = 0; i < totalCount; i++){
             rData r = readRDATA(response, offset);
+            if (r.type == 6) {
+                authoritative = true;
+            }
             offset += r.totalOffset;
             if(looker.tracingOn){
 
@@ -303,6 +308,7 @@ public class DNSResponse {
             this.printRDATA(rDataList, looker);
         }
         for(rData c: rDataList) {
+
             if(this.answerCount >= 1){
                 return rDataList.get(0);
             }
@@ -313,6 +319,10 @@ public class DNSResponse {
 //            }
             else {
                 if (c.type == 1) {
+                    return c;
+                }
+                if(c.type == 6){
+                    authoritative = true;
                     return c;
                 }
             }
