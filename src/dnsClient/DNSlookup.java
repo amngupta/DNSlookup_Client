@@ -14,6 +14,7 @@ public class DNSlookup {
     protected boolean IPV6Query = false;
     protected String queryString;
     protected String dnsString;
+    private static int finalQueryCount = 0;
     private static InetAddress fixedDNS;
     protected class Response{
         String ipAddress;
@@ -77,9 +78,7 @@ public class DNSlookup {
      */
     public Response startLookup(InetAddress rootNameServer) throws Exception{
         DNSResponse.rData nextRes = this.DNSLookup(this.queryString,rootNameServer);
-        int queries = 0;
         boolean checker = true;
-        System.out.println(this.queryString);
         while(checker) {
             if (this.response.answerCount > 0) {
                 //if we have an answer
@@ -90,7 +89,7 @@ public class DNSlookup {
                     //if answer contains a CNAME
                     this.queryString = nextRes.ns;
                     nextRes =  this.DNSLookup(this.queryString, fixedDNS);
-                    queries++;
+                    finalQueryCount++;
                 }
             }
             else{
@@ -104,11 +103,11 @@ public class DNSlookup {
 //                        System.out.println("Querying with ip" + nextRes.ipAddress)
                         nextRes = this.DNSLookup(this.queryString, InetAddress.getByName(nextRes.ipAddress));
                     }
-                    queries++;
+                    finalQueryCount++;
                 }
             }
             //If queries > 30; finish.
-            if (queries > 30) {
+            if (finalQueryCount > 30) {
                 System.out.println(this.queryString+" -3 0.0.0.0");
                 checker = false;
             }
@@ -159,8 +158,6 @@ public class DNSlookup {
         Response test = looker.startLookup(rootNameServer);
         if (test.finalAnswer) {
             System.out.println(args[1] + " " + looker.response.getActualType(test.type) + " " + test.ipAddress);
-        } else {
-            System.out.println(looker.response.getActualType(test.type) + " " + test.ipAddress);
         }
     }
 
