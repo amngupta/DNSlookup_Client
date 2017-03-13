@@ -14,26 +14,38 @@ public class DNSlookup {
     protected boolean IPV6Query = false;
     protected String queryString;
     protected String dnsString;
-
+    private static InetAddress fixedDNS;
     protected class Response{
         String ipAddress;
         boolean finalAnswer = false;
         int type;
     }
 
+
     /**
-     * Constructor
+     * Constructor for the DNSlookup class
+     * @param queryString the url being queried
+     * @param dnsString the IP address of the rootNameServer being queried
+     * @param isV6 if this query is v6
+     * @param isTracing is tracing mode on
+     * @param socket port to be assigned to the socket
      */
-    DNSlookup(){
+    DNSlookup(String queryString, String dnsString, boolean isV6, boolean isTracing, int socket){
         try {
-            this.serverSocket = new DatagramSocket(9876);
+            this.queryString = queryString;
+            this.dnsString = dnsString;
+            this.IPV6Query = isV6;
+            this.tracingOn = isTracing;
+            this.serverSocket = new DatagramSocket(socket);
             this.response = new DNSResponse(); // Just to force compilation
         }catch(Exception e)
-        {}
+        {
+            e.printStackTrace();
+        }
     }
 
     /**
-     * Main method to perform one iteration of querying
+     * method to perform one iteration of querying
      * @param url the url (or query) to be found
      * @param rootNameServer the dns being queried
      * @return returns a DNSResponse.rData object which is the closest to the final answer
@@ -56,11 +68,18 @@ public class DNSlookup {
         return this.response.decodeQuery(receiveBytes, this);
     }
 
-    public Response startLookup(InetAddress rootNameServer, String[] args) throws Exception{
+    /**
+     * This is the main method to call to perform the entire lookup. In case of only NS responses, the method
+     * builds an Object of DNSlookup and finds the IP of that NS and then goes back to its original work
+     * @param rootNameServer the rootNameServer to look with
+     * @return returns a Response object which states whether this is the final solution (Type A or AAAA) and the ipAddress
+     * @throws Exception
+     */
+    public Response startLookup(InetAddress rootNameServer) throws Exception{
         DNSResponse.rData nextRes = this.DNSLookup(this.queryString,rootNameServer);
         int queries = 0;
         boolean checker = true;
-
+        System.out.println(this.queryString);
         while(checker) {
             if (this.response.answerCount > 0) {
                 //if we have an answer
@@ -70,17 +89,19 @@ public class DNSlookup {
                 }else if(nextRes.ns.length() > 0){
                     //if answer contains a CNAME
                     this.queryString = nextRes.ns;
-                    nextRes =  this.DNSLookup(this.queryString, InetAddress.getByName(args[0]));
+                    nextRes =  this.DNSLookup(this.queryString, fixedDNS);
                     queries++;
                 }
             }
             else{
                 if(nextRes != null) {
                     if(nextRes.ipAddress == null && nextRes.ns.length() > 0){
-//                        System.out.println("Querying with ns");
-                        nextRes = this.DNSLookup(nextRes.ns, InetAddress.getByName(args[0]));
+                        int socket = (int) (Math.random() * (10000 - 8000)) + 8000;
+                        DNSlookup temp = new DNSlookup(nextRes.ns, fixedDNS.toString(), this.IPV6Query, this.tracingOn,socket);
+                        Response here = temp.startLookup(rootNameServer);
+                        nextRes = this.DNSLookup(this.queryString, InetAddress.getByName(here.ipAddress));
                     }else {
-//                        System.out.println("Querying with ip" + nextRes.ipAddress);
+//                        System.out.println("Querying with ip" + nextRes.ipAddress)
                         nextRes = this.DNSLookup(this.queryString, InetAddress.getByName(nextRes.ipAddress));
                     }
                     queries++;
@@ -98,6 +119,7 @@ public class DNSlookup {
         if(ans.type ==1 || ans.type ==28){
             ans.finalAnswer = true;
         }
+        this.serverSocket.close();
         return ans;
     }
 
@@ -106,7 +128,6 @@ public class DNSlookup {
      */
     public static void main(String[] args) throws Exception {
         String fqdn;
-        DNSlookup looker = new DNSlookup();
 
         int argCount = args.length;
         InetAddress rootNameServer;
@@ -115,31 +136,32 @@ public class DNSlookup {
             usage();
             return;
         }
+        boolean tracingOn =false;
+        boolean isIPv6 =false;
 
-        looker.queryString = args[1];
-        looker.dnsString = args[0];
-        rootNameServer = InetAddress.getByName(looker.dnsString);
         if (argCount == 3) {  // option provided
             if (args[2].equals("-t"))
-                looker.tracingOn = true;
+                tracingOn = true;
             else if (args[2].equals("-6"))
-                looker.IPV6Query = true;
+                isIPv6 = true;
             else if (args[2].equals("-t6")) {
-                looker.tracingOn = true;
-                looker.IPV6Query = true;
+                tracingOn = true;
+                isIPv6 = true;
             } else { // option present but wasn't valid option
                 usage();
                 return;
             }
         }
-        Response test = looker.startLookup(rootNameServer, args);
+        DNSlookup looker = new DNSlookup(args[1],args[0],isIPv6,tracingOn,9876);
+        rootNameServer = InetAddress.getByName(looker.dnsString);
+        fixedDNS = rootNameServer;
+
+        Response test = looker.startLookup(rootNameServer);
         if (test.finalAnswer) {
             System.out.println(args[1] + " " + looker.response.getActualType(test.type) + " " + test.ipAddress);
         } else {
             System.out.println(looker.response.getActualType(test.type) + " " + test.ipAddress);
         }
-        looker.serverSocket.close();
-
     }
 
     /**
