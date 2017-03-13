@@ -6,13 +6,14 @@ import java.util.ArrayList;
 
 public class DNSResponse {
     private int queryID;                  // this is for the response it must match the one in the request 
-    protected int answerCount = 0;          // number of answers
-    private boolean decoded = false;      // Was this response successfully decoded
+    protected int answerCount = 0;        // number of answers
     private int nsCount = 0;              // number of nscount response records
     private int additionalCount = 0;      // number of additional (alternate) response records
     protected boolean authoritative = false;// Is this an authoritative record
 
-    // Note you will almost certainly need some additional instance variables.
+    /**
+     * This is the rData class that is used to store information about each RData in response.
+     */
     class rData{
         String ipAddress;
         String name;
@@ -26,29 +27,38 @@ public class DNSResponse {
             return;
         }
     }
-    // When in trace mode you probably want to dump out all the relevant information in a response
+
     DNSResponse(){
         return;
     }
 
-    private static String getString(byte[] arr, int offset, int count){
-        String result = "";
-        for(int i = 0; i < count; i++){
-            char c = (char) arr[offset+i];
-            result+= c;
-        }
-        return result+".";
-    }
 
+    /**
+     * Used to parse the information in the response that is contained as  2 byte integer
+     * @param bytes array that contains the integers
+     * @param offset position in the array where to read from
+     * @return
+     */
     private int convertBytesToInt (byte [] arr, int offset)      // unsigned
     {
         return (arr[offset] & 0xFF) << 8 | (arr[offset+1] & 0xFF);
     }
 
+    /**
+     * Used to parse the TTL, basically converts 4 bytes into an integer
+     * @param bytes array that contains the integers
+     * @param offset position in the array where to read from
+     * @return
+     */
     private int convert4BytesToInt(byte[] bytes, int offset) {
         return bytes[offset] << 24 | (bytes[offset+1] & 0xFF) << 16 | (bytes[offset+2] & 0xFF) << 8 | (bytes[offset+3] & 0xFF);
     }
 
+    /**
+     * Returns the human-readable TYPE of the RData Type
+     * @param i the integer value of the RData Type
+     * @return string 'A', 'NS', 'AAAA', 'CN'
+     */
     protected static String getActualType(int i){
         String actualType = "";
         switch (i){
@@ -72,6 +82,11 @@ public class DNSResponse {
         return actualType;
     }
 
+    /**
+     * Encodes the query into a byte array before sending to the DNS
+     * @param query: The string containing the website being looked up
+     * @return byte array containing all the information for a query
+     */
     byte[] encodeQuery(String query) {
 
         byte[] encodedQuery = new byte[64];
@@ -109,6 +124,13 @@ public class DNSResponse {
         }
         return encodedQuery;
     }
+
+    /**
+     * Parses the name or the NS of the RData
+     * @param arr: The byte array containing the response from the DNS server
+     * @param offset: The integer offset where the name starts from
+     * @return name in the RData Object as byte array
+     */
     public byte[] getName(byte[] arr, int offset) {
         byte[] name = new byte[512];
 
@@ -141,6 +163,13 @@ public class DNSResponse {
 
 
     }
+
+    /**
+     * Reads the data from a certain offset in the array to parse all information about that Response Data Object
+     * @param arr: The byte array containing the response from the DNS server
+     * @param offset: The integer offset where the RData starts from
+     * @return returns the rData Object
+     */
     public rData readRDATA (byte [] arr, int offset){
         rData rData = new rData();
 
@@ -196,6 +225,14 @@ public class DNSResponse {
         return rData;
     }
 
+
+    /**
+     * This method decodes the queryResponse
+     * @param response: The byte array of the response received from the DNS server
+     * @param looker: The DNSloopup class object that is calling the method
+     * @return rData object that best fits the query
+     * @throws Exception
+     */
     rData decodeQuery(byte[] response, DNSlookup looker) throws  Exception{
         byte[] defaultadd = new byte[4];
         InetAddress s = InetAddress.getByAddress(defaultadd);
@@ -243,16 +280,11 @@ public class DNSResponse {
                     System.out.println("  Additional Information ("+this.additionalCount+")");
                 }
                 if(r.ipAddress == null){
-                    System.out.format("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ns);
+                    System.out.printf("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ns);
                 }
                 else{
-                    System.out.format("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ipAddress);
+                    System.out.printf("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ipAddress);
                 }
-//                if(i >= answerCount & i < (answerCount+nsCount)) {
-//                    System.out.format("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ns);
-//                } else {
-//                    System.out.format("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ipAddress);
-//                }
             }
             rDataList.add(r);
         }
@@ -260,8 +292,15 @@ public class DNSResponse {
             if(this.answerCount >= 1){
                 return rDataList.get(0);
             }
-            if(c.type == 1){
-                return c;
+            if(looker.IPV6Query){
+                if(c.type == 28){
+                    return c;
+                }
+            }
+            else {
+                if (c.type == 1) {
+                    return c;
+                }
             }
         }
         return null;
