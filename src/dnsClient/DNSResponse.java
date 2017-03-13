@@ -225,6 +225,39 @@ public class DNSResponse {
         return rData;
     }
 
+    /**
+     * Method to handle the printing for traceRoute
+     * @param rDatas the arraylist of traceRoutes for one iteration of the query
+     * @param looker the parent looker class required for some protected variables.
+     */
+    protected void printRDATA(ArrayList<rData> rDatas, DNSlookup looker){
+        String queryType = "A";
+        if(looker.IPV6Query){
+            queryType = "AAAA";
+        }
+        System.out.println();
+        System.out.println();
+        System.out.println("Query ID     "+this.queryID+" "+" "+looker.queryString+"  "+queryType+" --> "+looker.dnsString.toString().replaceAll("[/]",""));
+        System.out.println("Response ID "+this.queryID+" Authoritative = "+this.authoritative);
+        System.out.println("  Answers ("+this.answerCount+")");
+        int i = 0;
+        for(rData r: rDatas){
+            if(i == this.answerCount) {
+                System.out.println("  Nameservers (" + this.nsCount + ")");
+            }
+            if(i == this.nsCount+this.answerCount){
+                System.out.println("  Additional Information ("+this.additionalCount+")");
+            }
+            if(r.ipAddress == null){
+                System.out.printf("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ns);
+            }
+            else{
+                System.out.printf("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ipAddress);
+            }
+            i++;
+        }
+    }
+
 
     /**
      * This method decodes the queryResponse
@@ -252,41 +285,21 @@ public class DNSResponse {
         }else{
             this.authoritative = false;
         }
-        if(looker.tracingOn){
-            String queryType = "A";
-            if(looker.IPV6Query){
-                queryType = "AAAA";
-            }
-            System.out.println();
-            System.out.println();
-            System.out.println("Query ID     "+this.queryID+" "+" "+looker.queryString+"  "+queryType+" --> "+looker.dnsString.toString().replaceAll("[/]",""));
-            System.out.println("Response ID "+this.queryID+" Authoritative = "+this.authoritative);
-            System.out.println("  Answers ("+this.answerCount+")");
-        }
         int queryType = this.convertBytesToInt(response, offset+1);
         int queryClass = this.convertBytesToInt(response, offset+3);
         offset +=5;
         int totalCount = this.nsCount + this.additionalCount +this.answerCount;
         ArrayList<rData> rDataList = new ArrayList<rData>();
-
         for (int i = 0; i < totalCount; i++){
             rData r = readRDATA(response, offset);
             offset += r.totalOffset;
             if(looker.tracingOn){
-                if(i == this.answerCount) {
-                    System.out.println("  Nameservers (" + this.nsCount + ")");
-                }
-                if(i == this.nsCount+this.answerCount){
-                    System.out.println("  Additional Information ("+this.additionalCount+")");
-                }
-                if(r.ipAddress == null){
-                    System.out.printf("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ns);
-                }
-                else{
-                    System.out.printf("       %-30s %-10d %-4s %s\n", r.name, r.ttl, getActualType(r.type), r.ipAddress);
-                }
+
             }
             rDataList.add(r);
+        }
+        if(looker.tracingOn){
+            this.printRDATA(rDataList, looker);
         }
         for(rData c: rDataList) {
             if(this.answerCount >= 1){
@@ -303,7 +316,7 @@ public class DNSResponse {
                 }
             }
         }
-        return null;
+        return rDataList.get(0);
     }
 }
 
