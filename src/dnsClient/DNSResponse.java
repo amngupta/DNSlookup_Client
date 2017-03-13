@@ -32,7 +32,6 @@ public class DNSResponse {
         return;
     }
 
-
     /**
      * Used to parse the information in the response that is contained as  2 byte integer
      * @param arr array that contains the integers
@@ -87,10 +86,8 @@ public class DNSResponse {
      * @param query: The string containing the website being looked up
      * @return byte array containing all the information for a query
      */
-    byte[] encodeQuery(String query, DNSlookup looker) {
-
+    protected byte[] encodeQuery(String query, DNSlookup looker) {
         byte[] encodedQuery = new byte[64];
-
         try {
             query = query.replace(new String(Character.toChars(0)), "");
             String[] split = query.split("\\.");
@@ -135,7 +132,7 @@ public class DNSResponse {
      * @param offset: The integer offset where the name starts from
      * @return name in the RData Object as byte array
      */
-    public byte[] getName(byte[] arr, int offset) {
+    protected byte[] getName(byte[] arr, int offset) {
         byte[] name = new byte[512];
 
         int i = 0;
@@ -174,7 +171,7 @@ public class DNSResponse {
      * @param offset: The integer offset where the RData starts from
      * @return returns the rData Object
      */
-    public rData readRDATA (byte [] arr, int offset){
+    protected rData readRDATA (byte [] arr, int offset){
         rData rData = new rData();
 
         try {

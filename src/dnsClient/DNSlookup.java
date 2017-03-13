@@ -1,16 +1,9 @@
 package dnsClient;
 
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 
-/**
- *
- */
-
-/**
- * @author Donald Acton
- * This example is adapted from Kurose & Ross
- * Feel free to modify and rearrange code as you see fit
- */
 public class DNSlookup {
 
     static final int MIN_PERMITTED_ARGUMENT_COUNT = 2;
@@ -21,6 +14,12 @@ public class DNSlookup {
     protected boolean IPV6Query = false;
     protected String queryString;
     protected String dnsString;
+
+    protected class Response{
+        String ipAddress;
+        boolean finalAnswer = false;
+        int type;
+    }
 
     /**
      * Constructor
@@ -40,7 +39,7 @@ public class DNSlookup {
      * @return returns a DNSResponse.rData object which is the closest to the final answer
      * @throws Exception
      */
-    public DNSResponse.rData DNSLookup(String url, InetAddress rootNameServer) throws Exception{
+    private DNSResponse.rData DNSLookup(String url, InetAddress rootNameServer) throws Exception{
         byte[] receiveData = new byte[1024];
         // Some problem here when calling in decodeResponse
         byte[] sendData = this.response.encodeQuery(url, this);
@@ -57,8 +56,53 @@ public class DNSlookup {
         return this.response.decodeQuery(receiveBytes, this);
     }
 
+    public Response startLookup(InetAddress rootNameServer, String[] args) throws Exception{
+        DNSResponse.rData nextRes = this.DNSLookup(this.queryString,rootNameServer);
+        int queries = 0;
+        boolean checker = true;
+
+        while(checker) {
+            if (this.response.answerCount > 0) {
+                //if we have an answer
+                if(nextRes.type == 1 || nextRes.type == 28){
+                    //if answer is of type ipV4 or ipV6
+                    checker = false;
+                }else if(nextRes.ns.length() > 0){
+                    //if answer contains a CNAME
+                    this.queryString = nextRes.ns;
+                    nextRes =  this.DNSLookup(this.queryString, InetAddress.getByName(args[0]));
+                    queries++;
+                }
+            }
+            else{
+                if(nextRes != null) {
+                    if(nextRes.ipAddress == null && nextRes.ns.length() > 0){
+//                        System.out.println("Querying with ns");
+                        nextRes = this.DNSLookup(nextRes.ns, InetAddress.getByName(args[0]));
+                    }else {
+//                        System.out.println("Querying with ip" + nextRes.ipAddress);
+                        nextRes = this.DNSLookup(this.queryString, InetAddress.getByName(nextRes.ipAddress));
+                    }
+                    queries++;
+                }
+            }
+            //If queries > 30; finish.
+            if (queries > 30) {
+                System.out.println(this.queryString+" -3 0.0.0.0");
+                checker = false;
+            }
+        }
+        Response ans = new Response();
+        ans.ipAddress = nextRes.ipAddress;
+        ans.type = nextRes.type;
+        if(ans.type ==1 || ans.type ==28){
+            ans.finalAnswer = true;
+        }
+        return ans;
+    }
+
     /**
-     * @param args
+     * @param args must contain the first DNS, the URL to query and other optional inputs
      */
     public static void main(String[] args) throws Exception {
         String fqdn;
@@ -83,50 +127,16 @@ public class DNSlookup {
             else if (args[2].equals("-t6")) {
                 looker.tracingOn = true;
                 looker.IPV6Query = true;
-            }
-            else { // option present but wasn't valid option
+            } else { // option present but wasn't valid option
                 usage();
                 return;
             }
         }
-        int queries = 0;
-        boolean checker = true;
-        DNSResponse.rData nextRes = looker.DNSLookup(looker.queryString,rootNameServer);
-        while(checker) {
-            if (looker.response.authoritative & looker.response.answerCount == 0) {
-                System.out.println(looker.queryString+" -6 "+looker.response.getActualType(nextRes.type)+" 0.0.0.0");
-                break;
-            }
-            if (looker.response.answerCount > 0) {
-                //if we have an answer
-                if(nextRes.type == 1 || nextRes.type == 28){
-                    //if answer is of type ipV4 or ipV6
-                    checker = false;
-                }else if(nextRes.ns.length() > 0){
-                    //if answer contains a CNAME
-                    looker.queryString = nextRes.ns;
-                    nextRes =  looker.DNSLookup(looker.queryString, InetAddress.getByName(args[0]));
-                    queries++;
-                }
-            }
-            else{
-                if(nextRes != null) {
-                    if(nextRes.ipAddress == null && nextRes.ns.length() > 0){
-                        nextRes = looker.DNSLookup(nextRes.ns, InetAddress.getByName(args[0]));
-                    }else
-                        nextRes = looker.DNSLookup(looker.queryString, InetAddress.getByName(nextRes.ipAddress));
-                    queries++;
-                }
-            }
-            //If queries > 30; finish.
-            if (queries > 30) {
-                System.out.println(looker.queryString+" -3 "+looker.response.getActualType(nextRes.type)+" 0.0.0.0");
-                checker = false;
-            }
-        }
-        if(looker.response.answerCount > 0){
-            //Print final response
-            System.out.println(args[1]+" "+looker.response.getActualType(nextRes.type) +  " " + nextRes.ipAddress);
+        Response test = looker.startLookup(rootNameServer, args);
+        if (test.finalAnswer) {
+            System.out.println(args[1] + " " + looker.response.getActualType(test.type) + " " + test.ipAddress);
+        } else {
+            System.out.println(looker.response.getActualType(test.type) + " " + test.ipAddress);
         }
         looker.serverSocket.close();
 
