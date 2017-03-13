@@ -43,7 +43,7 @@ public class DNSlookup {
     public DNSResponse.rData DNSLookup(String url, InetAddress rootNameServer) throws Exception{
         byte[] receiveData = new byte[1024];
         // Some problem here when calling in decodeResponse
-        byte[] sendData = this.response.encodeQuery(url);
+        byte[] sendData = this.response.encodeQuery(url, this);
         this.dnsString = rootNameServer.toString();
         DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, rootNameServer, 53);
         DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
@@ -93,6 +93,10 @@ public class DNSlookup {
         boolean checker = true;
         DNSResponse.rData nextRes = looker.DNSLookup(looker.queryString,rootNameServer);
         while(checker) {
+            if (looker.response.authoritative & looker.response.answerCount == 0) {
+                System.out.println(looker.queryString+" -6 "+looker.response.getActualType(nextRes.type)+" 0.0.0.0");
+                break;
+            }
             if (looker.response.answerCount > 0) {
                 //if we have an answer
                 if(nextRes.type == 1 || nextRes.type == 28){
@@ -116,7 +120,7 @@ public class DNSlookup {
             }
             //If queries > 30; finish.
             if (queries > 30) {
-                System.out.println(looker.queryString+" -3 0.0.0.0");
+                System.out.println(looker.queryString+" -3 "+looker.response.getActualType(nextRes.type)+" 0.0.0.0");
                 checker = false;
             }
         }

@@ -7,8 +7,8 @@ import java.util.ArrayList;
 public class DNSResponse {
     private int queryID;                  // this is for the response it must match the one in the request 
     protected int answerCount = 0;        // number of answers
-    private int nsCount = 0;              // number of nscount response records
-    private int additionalCount = 0;      // number of additional (alternate) response records
+    protected int nsCount = 0;              // number of nscount response records
+    protected int additionalCount = 0;      // number of additional (alternate) response records
     protected boolean authoritative = false;// Is this an authoritative record
 
     /**
@@ -35,7 +35,7 @@ public class DNSResponse {
 
     /**
      * Used to parse the information in the response that is contained as  2 byte integer
-     * @param bytes array that contains the integers
+     * @param arr array that contains the integers
      * @param offset position in the array where to read from
      * @return
      */
@@ -87,7 +87,7 @@ public class DNSResponse {
      * @param query: The string containing the website being looked up
      * @return byte array containing all the information for a query
      */
-    byte[] encodeQuery(String query) {
+    byte[] encodeQuery(String query, DNSlookup looker) {
 
         byte[] encodedQuery = new byte[64];
 
@@ -117,7 +117,11 @@ public class DNSResponse {
                     }
                 }
             }
-            encodedQuery[counter + 2] = 1;
+            if (looker.IPV6Query) {
+                encodedQuery[counter + 2] = 28;
+            } else {
+                encodedQuery[counter + 2] = 1;
+            }
             encodedQuery[counter + 4] = 1;
         }catch(Exception e){
             e.printStackTrace();
@@ -305,11 +309,11 @@ public class DNSResponse {
             if(this.answerCount >= 1){
                 return rDataList.get(0);
             }
-            if(looker.IPV6Query){
-                if(c.type == 28){
-                    return c;
-                }
-            }
+//            if(looker.IPV6Query){
+//                if(c.type == 28){
+//                    return c;
+//                }
+//            }
             else {
                 if (c.type == 1) {
                     return c;
