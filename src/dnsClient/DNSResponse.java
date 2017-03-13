@@ -134,8 +134,11 @@ public class DNSResponse {
      */
     protected byte[] getName(byte[] arr, int offset) {
         byte[] name = new byte[512];
+
         int i = 0;
+
         while(true) {
+
             if ((arr[offset] & 0xFF) == 0) {
                 return name;
             }
@@ -158,6 +161,8 @@ public class DNSResponse {
                 offset++;
             }
         }
+
+
     }
 
     /**
@@ -259,10 +264,10 @@ public class DNSResponse {
      * This method decodes the queryResponse
      * @param response: The byte array of the response received from the DNS server
      * @param looker: The DNSloopup class object that is calling the method
-     * @return ArrayList of rData objects that have been decoded.
+     * @return rData object that best fits the query
      * @throws Exception
      */
-    protected ArrayList<rData> decodeQuery(byte[] response, DNSlookup looker) throws  Exception{
+    rData decodeQuery(byte[] response, DNSlookup looker) throws  Exception{
         byte[] defaultadd = new byte[4];
         InetAddress s = InetAddress.getByAddress(defaultadd);
         String qname = "";
@@ -302,8 +307,27 @@ public class DNSResponse {
         if(looker.tracingOn){
             this.printRDATA(rDataList, looker);
         }
+        for(rData c: rDataList) {
 
-        return rDataList;
+            if(this.answerCount >= 1){
+                return rDataList.get(0);
+            }
+//            if(looker.IPV6Query){
+//                if(c.type == 28){
+//                    return c;
+//                }
+//            }
+            else {
+                if (c.type == 1) {
+                    return c;
+                }
+                if(c.type == 6){
+                    authoritative = true;
+                    return c;
+                }
+            }
+        }
+        return rDataList.get(0);
     }
 }
 

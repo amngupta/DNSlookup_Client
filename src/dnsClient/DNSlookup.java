@@ -4,7 +4,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
 
 public class DNSlookup {
 
@@ -52,10 +51,10 @@ public class DNSlookup {
      * method to perform one iteration of querying
      * @param url the url (or query) to be found
      * @param rootNameServer the dns being queried
-     * @return returns an ArrayList DNSResponse.rData object that have been decoded
+     * @return returns a DNSResponse.rData object which is the closest to the final answer
      * @throws Exception
      */
-    private ArrayList<DNSResponse.rData> DNSLookup(String url, InetAddress rootNameServer) throws Exception{
+    private DNSResponse.rData DNSLookup(String url, InetAddress rootNameServer) throws Exception{
         byte[] receiveData = new byte[1024];
         // Some problem here when calling in decodeResponse
         byte[] sendData = this.response.encodeQuery(url, this);
@@ -67,6 +66,7 @@ public class DNSlookup {
             this.serverSocket.receive(receivePacket);
         }catch(Exception e){
             System.out.println(this.queryString + " -2 " + "A" + " 0.0.0.0");
+
         }
         byte[] receiveBytes = receivePacket.getData();
         return this.response.decodeQuery(receiveBytes, this);
@@ -76,27 +76,11 @@ public class DNSlookup {
      * This is the main method to call to perform the entire lookup. In case of only NS responses, the method
      * builds an Object of DNSlookup and finds the IP of that NS and then goes back to its original work
      * @param rootNameServer the rootNameServer to look with
-     * @return returns an arrayList of Response object which states whether this is the final solution (Type A or AAAA) and the ipAddress
+     * @return returns a Response object which states whether this is the final solution (Type A or AAAA) and the ipAddress
      * @throws Exception
      */
-    public ArrayList<Response> startLookup(InetAddress rootNameServer) throws Exception{
-        ArrayList<DNSResponse.rData> list = new ArrayList<DNSResponse.rData>();
-        list = this.DNSLookup(this.queryString,rootNameServer);
-        DNSResponse.rData nextRes = null;
-        for(DNSResponse.rData c: list) {
-            if(this.response.answerCount == 1){
-                nextRes= list.get(0);
-            }
-            else {
-                if (c.type == 1) {
-                    nextRes=  c;
-                }
-                if(c.type == 6){
-                    this.response.authoritative = true;
-                    nextRes=  c;
-                }
-            }
-        }
+    public Response startLookup(InetAddress rootNameServer) throws Exception{
+        DNSResponse.rData nextRes = this.DNSLookup(this.queryString,rootNameServer);
         boolean checker = true;
         while(checker) {
             if (this.response.authoritative & this.response.answerCount ==0){
@@ -111,7 +95,7 @@ public class DNSlookup {
                 }else if(nextRes.ns.length() > 0){
                     //if answer contains a CNAME
                     this.queryString = nextRes.ns;
-                    list =  this.DNSLookup(this.queryString, fixedDNS);
+                    nextRes =  this.DNSLookup(this.queryString, fixedDNS);
                     finalQueryCount++;
                 }
             }
@@ -120,11 +104,11 @@ public class DNSlookup {
                     if(nextRes.ipAddress == null && nextRes.ns.length() > 0){
                         int socket = (int) (Math.random() * (10000 - 8000)) + 8000;
                         DNSlookup temp = new DNSlookup(nextRes.ns, fixedDNS.toString(), this.IPV6Query, this.tracingOn,socket);
-                        ArrayList<Response> here = temp.startLookup(rootNameServer);
-                        list = this.DNSLookup(this.queryString, InetAddress.getByName(here.get(0).ipAddress));
+                        Response here = temp.startLookup(rootNameServer);
+                        nextRes = this.DNSLookup(this.queryString, InetAddress.getByName(here.ipAddress));
                     }else {
 //                        System.out.println("Querying with ip" + nextRes.ipAddress)
-                        list = this.DNSLookup(this.queryString, InetAddress.getByName(nextRes.ipAddress));
+                        nextRes = this.DNSLookup(this.queryString, InetAddress.getByName(nextRes.ipAddress));
                     }
                     finalQueryCount++;
                 }
@@ -134,44 +118,15 @@ public class DNSlookup {
                 System.out.println(this.queryString+" -3 0.0.0.0");
                 checker = false;
             }
-            boolean nextResChanged = false;
-            for(DNSResponse.rData c: list) {
-                if(this.response.answerCount >= 1){
-                    nextRes= list.get(0);
-                    nextResChanged = true;
-                }
-                else {
-                    if (c.type == 1) {
-                        nextRes=  c;
-                        nextResChanged = true;
-                    }
-                    if(c.type == 6){
-                        this.response.authoritative = true;
-                        nextRes=  c;
-                        nextResChanged = true;
-                    }
-                }
-            }
-            if(!nextResChanged){
-                nextRes = list.get(0);
-            }
         }
-        ArrayList<Response> ansList = new ArrayList<>();
-        if(this.response.answerCount >= 1) {
-            for(int i = 0; i <this.response.answerCount; i++){
-                Response ans = new Response();
-                ans.ipAddress = list.get(i).ipAddress;
-                ans.type = list.get(i).type;
-                if (ans.type == 1 || ans.type == 28) {
-                    ans.finalAnswer = true;
-                }
-                ansList.add(ans);
-            }
+        Response ans = new Response();
+        ans.ipAddress = nextRes.ipAddress;
+        ans.type = nextRes.type;
+        if(ans.type ==1 || ans.type ==28){
+            ans.finalAnswer = true;
         }
-//        System.out.println("Length: " + ansList.size());
-
         this.serverSocket.close();
-        return ansList;
+        return ans;
     }
 
     /**
@@ -207,12 +162,11 @@ public class DNSlookup {
         rootNameServer = InetAddress.getByName(looker.dnsString);
         fixedDNS = rootNameServer;
 
-        ArrayList<Response> test = looker.startLookup(rootNameServer);
-//        System.out.println("Length: " + test.size());
-        for (Response obj: test) {
-            if (obj.finalAnswer) {
-                System.out.println(args[1] + " " + looker.response.getActualType(obj.type) + " " + obj.ipAddress);
-            }
+        Response test = looker.startLookup(rootNameServer);
+        if (test.finalAnswer) {
+            System.out.println(args[1] + " " + looker.response.getActualType(test.type) + " " + test.ipAddress);
+        } else {
+            //System.out.println(looker.response.getActualType(test.type) + " " + test.ipAddress);
         }
     }
 
